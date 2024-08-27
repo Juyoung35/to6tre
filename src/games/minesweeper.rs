@@ -27,14 +27,21 @@ struct GameState {
     is_game_over: bool,
 }
 
-fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .insert_resource(GameBoard { cells: Vec::new(), is_generated: false })
-        .insert_resource(GameState { is_game_over: false })
-        .add_system(Startup, setup)
-        .add_system(Update, cell_click)
-        .run();
+pub struct MineSweeperPlugin {
+    game_board: GameBoard,
+    game_state: GameState,
+}
+
+impl Plugin for MineSweeperPlugin {
+    fn build(&self, app: &mut App) {
+        let game_board = GameBoard { cells: Vec::new(), is_generated: false };
+        let game_state = GameState { is_game_over: false };
+        app
+            .insert_resource(game_board)
+            .insert_resource(game_state)
+            .add_systems(Startup, setup)
+            .add_systems(Update, cell_click);
+    }
 }
 
 fn setup(mut commands: Commands, mut game_board: ResMut<GameBoard>) {
@@ -47,7 +54,7 @@ fn setup(mut commands: Commands, mut game_board: ResMut<GameBoard>) {
                 .spawn((
                     SpriteBundle {
                         sprite: Sprite {
-                            color: Color::GRAY,
+                            color: Color::Srgba(0.5, 0.5, 0.5, 1.0),
                             custom_size: Some(Vec2::new(30.0, 30.0)),
                             ..default()
                         },
@@ -59,9 +66,8 @@ fn setup(mut commands: Commands, mut game_board: ResMut<GameBoard>) {
                         ..default()
                     },
                     Cell {
-                        is_mine: false,
                         is_revealed: false,
-                        adjacent_mines: 0,
+                        cell_type: CellType::Clue(0),
                     },
                 ))
                 .id();
@@ -70,7 +76,6 @@ fn setup(mut commands: Commands, mut game_board: ResMut<GameBoard>) {
         game_board.cells.push(row);
     }
 }
-
 
 fn generate_puzzle(commands: &mut Commands, game_board: &mut GameBoard, start_x: usize, start_y: usize) {
     let mut rng = rand::thread_rng();
@@ -82,8 +87,10 @@ fn generate_puzzle(commands: &mut Commands, game_board: &mut GameBoard, start_x:
                 continue; // Ensure the starting cell is not a mine
             }
             let is_mine = rng.gen::<f32>() < MINE_CHANCE;
-            if let Ok(mut cell) = commands.get_entity(game_board.cells[y][x]) {
-                cell.get_mut::<Cell>().unwrap().is_mine = is_mine;
+            if let Some(mut cell) = commands.get_entity(game_board.cells[y][x]) {
+                if is_mine {
+                    cell.get_mut::<Cell>().unwrap().cell_type = CellType::Mine;
+                }
             }
         }
     }
@@ -100,16 +107,16 @@ fn generate_puzzle(commands: &mut Commands, game_board: &mut GameBoard, start_x:
                     let nx = x as i32 + dx;
                     let ny = y as i32 + dy;
                     if nx >= 0 && nx < GRID_SIZE as i32 && ny >= 0 && ny < GRID_SIZE as i32 {
-                        if let Ok(neighbor) = commands.get_entity(game_board.cells[ny as usize][nx as usize]) {
-                            if neighbor.get::<Cell>().unwrap().is_mine {
+                        if let Some(neighbor) = commands.get_entity(game_board.cells[ny as usize][nx as usize]) {
+                            if let CellType::Mine = neighbor.get::<Cell>().unwrap().cell_type {
                                 count += 1;
                             }
                         }
                     }
                 }
             }
-            if let Ok(mut cell) = commands.get_entity(game_board.cells[y][x]) {
-                cell.get_mut::<Cell>().unwrap().adjacent_mines = count;
+            if let Some(mut cell) = commands.get_entity(game_board.cells[y][x]) {
+                cell.get_mut::<Cell>().unwrap().cell_type = CellType::Clue(count);
             }
         }
     }
@@ -123,7 +130,7 @@ fn reveal_cell(commands: &mut Commands, game_board: &GameBoard, x: usize, y: usi
     }
 
     let entity = game_board.cells[y][x];
-    if let Ok(mut cell_entry) = commands.get_entity(entity) {
+    if let Some(mut cell_entry) = commands.get_entity(entity) {
         let mut cell = cell_entry.get_mut::<Cell>().unwrap();
         if cell.is_revealed {
             return false;
@@ -134,7 +141,7 @@ fn reveal_cell(commands: &mut Commands, game_board: &GameBoard, x: usize, y: usi
         sprite.color = Color::WHITE;
 
         if cell.is_mine {
-            sprite.color = Color::RED;
+            sprite.color = Color::Srgba(Srgba::RED);
             return true; // Game over
         } else if cell.adjacent_mines > 0 {
             commands.entity(entity).with_children(|parent| {
