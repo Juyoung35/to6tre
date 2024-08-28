@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::input::mouse::MouseButtonInput;
 use rand::Rng;
 
 const MINE_CHANCE: f32 = 0.15;
@@ -44,7 +45,10 @@ impl Plugin for MineSweeperPlugin {
     }
 }
 
-fn setup(mut commands: Commands, mut game_board: ResMut<GameBoard>) {
+fn setup(
+    mut commands: Commands,
+    mut game_board: ResMut<GameBoard>
+) {
     commands.spawn(Camera2dBundle::default());
 
     for y in 0..GRID_SIZE {
@@ -77,7 +81,11 @@ fn setup(mut commands: Commands, mut game_board: ResMut<GameBoard>) {
     }
 }
 
-fn generate_puzzle(commands: &mut Commands, game_board: &mut GameBoard, start_x: usize, start_y: usize) {
+fn generate_puzzle(
+    commands: &mut Commands,
+    game_board: Res<GameBoard>,
+    cell_query: Query<(Entity, &Transform, &mut Cell)>,
+    start_x: usize, start_y: usize) {
     let mut rng = rand::thread_rng();
 
     // Place mines
@@ -87,10 +95,9 @@ fn generate_puzzle(commands: &mut Commands, game_board: &mut GameBoard, start_x:
                 continue; // Ensure the starting cell is not a mine
             }
             let is_mine = rng.gen::<f32>() < MINE_CHANCE;
-            if let Some(mut cell) = commands.get_entity(game_board.cells[y][x]) {
-                if is_mine {
-                    cell.get_mut::<Cell>().unwrap().cell_type = CellType::Mine;
-                }
+            if !is_mine { continue }
+            if let Some((_, _, cell)) = cell_query.get_mut(game_board.cells[y][x]) {
+                cell.cell_type = CellType::Mine;
             }
         }
     }
@@ -108,15 +115,15 @@ fn generate_puzzle(commands: &mut Commands, game_board: &mut GameBoard, start_x:
                     let ny = y as i32 + dy;
                     if nx >= 0 && nx < GRID_SIZE as i32 && ny >= 0 && ny < GRID_SIZE as i32 {
                         if let Some(neighbor) = commands.get_entity(game_board.cells[ny as usize][nx as usize]) {
-                            if let CellType::Mine = neighbor.get::<Cell>().unwrap().cell_type {
+                            if let CellType::Mine = cell_query.get(neighbor).unwrap().cell_type {
                                 count += 1;
                             }
                         }
                     }
                 }
             }
-            if let Some(mut cell) = commands.get_entity(game_board.cells[y][x]) {
-                cell.get_mut::<Cell>().unwrap().cell_type = CellType::Clue(count);
+            if let Some((_, _, cell)) = cell_query.get_mut(game_board.cells[y][x]) {
+                cell.cell_type = CellType::Clue(count);
             }
         }
     }
@@ -124,51 +131,60 @@ fn generate_puzzle(commands: &mut Commands, game_board: &mut GameBoard, start_x:
     game_board.is_generated = true;
 }
 
-fn reveal_cell(commands: &mut Commands, game_board: &GameBoard, x: usize, y: usize) -> bool {
+fn reveal_cell(
+    commands: &mut Commands,
+    game_board: Res<GameBoard>,
+    cell_query: Query<(Entity, &Transform, &mut Cell)>,
+    sprite_query: Query<&mut Sprite>,
+    x: usize, y: usize
+) -> bool {
     if x >= GRID_SIZE || y >= GRID_SIZE {
         return false;
     }
 
     let entity = game_board.cells[y][x];
-    if let Some(mut cell_entry) = commands.get_entity(entity) {
-        let mut cell = cell_entry.get_mut::<Cell>().unwrap();
+    if let Ok((_, _, mut cell)) = cell_query.get_mut(entity) {
         if cell.is_revealed {
             return false;
         }
 
         cell.is_revealed = true;
-        let mut sprite = cell_entry.get_mut::<Sprite>().unwrap();
+        let mut sprite = sprite_query.get_mut(entity).unwrap();
         sprite.color = Color::WHITE;
 
-        if cell.is_mine {
-            sprite.color = Color::Srgba(Srgba::RED);
-            return true; // Game over
-        } else if cell.adjacent_mines > 0 {
-            commands.entity(entity).with_children(|parent| {
-                parent.spawn(Text2dBundle {
-                    text: Text::from_section(
-                        cell.adjacent_mines.to_string(),
-                        TextStyle {
-                            font_size: 20.0,
-                            color: Color::BLACK,
-                            ..default()
-                        },
-                    ),
-                    transform: Transform::from_xyz(0.0, 0.0, 1.0),
-                    ..default()
+        match cell.cell_type {
+            CellType::Mine => {
+                sprite.color = Color::Srgba(Srgba::RED);
+                return true; // Game over
+            },
+            CellType::Clue(num) if num > 0 => {
+                commands.entity(entity).with_children(|parent| {
+                    parent.spawn(Text2dBundle {
+                        text: Text::from_section(
+                            num.to_string(),
+                            TextStyle {
+                                font_size: 20.0,
+                                color: Color::BLACK,
+                                ..default()
+                            },
+                        ),
+                        transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                        ..default()
+                    });
                 });
-            });
-        } else {
-            // Reveal adjacent cells
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    if dx == 0 && dy == 0 {
-                        continue;
-                    }
-                    let nx = x as i32 + dx;
-                    let ny = y as i32 + dy;
-                    if nx >= 0 && nx < GRID_SIZE as i32 && ny >= 0 && ny < GRID_SIZE as i32 {
-                        reveal_cell(commands, game_board, nx as usize, ny as usize);
+            },
+            _ => {
+                // Reveal adjacent cells
+                for dy in -1..=1 {
+                    for dx in -1..=1 {
+                        if dx == 0 && dy == 0 {
+                            continue;
+                        }
+                        let nx = x as i32 + dx;
+                        let ny = y as i32 + dy;
+                        if nx >= 0 && nx < GRID_SIZE as i32 && ny >= 0 && ny < GRID_SIZE as i32 {
+                            reveal_cell(commands, game_board, cell_query, sprite_query, nx as usize, ny as usize);
+                        }
                     }
                 }
             }
@@ -179,12 +195,12 @@ fn reveal_cell(commands: &mut Commands, game_board: &GameBoard, x: usize, y: usi
 
 fn cell_click(
     mut commands: Commands,
-    mouse_button: Res<ButtonInput<MouseButton>>,
-    window: Res<Window>,
-    mut game_board: ResMut<GameBoard>,
+    mut mouse_button_events: EventReader<MouseButtonInput>,
+    mut game_board: Res<GameBoard>,
     mut game_state: ResMut<GameState>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
-    cell_query: Query<(Entity, &Transform, &Cell)>,
+    cell_query: Query<(Entity, &Transform, &mut Cell)>,
+    sprite_query: Query<&mut Sprite>,
 ) {
     if game_state.is_game_over {
         return;
@@ -192,7 +208,7 @@ fn cell_click(
 
     if mouse_button.just_pressed(MouseButton::Left) {
         let (camera, camera_transform) = camera_query.single();
-        let window = windows.get_primary().unwrap();
+        let window = mouse_butto_events.read().window.get_primary().unwrap();
 
         if let Some(world_position) = window.cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
@@ -205,10 +221,10 @@ fn cell_click(
                     let grid_y = ((cell_pos.y + (GRID_SIZE as f32 / 2.0) * 32.0) / 32.0) as usize;
 
                     if !game_board.is_generated {
-                        generate_puzzle(&mut commands, &mut game_board, grid_x, grid_y);
+                        generate_puzzle(&mut commands, game_board, cell_query, grid_x, grid_y);
                     }
 
-                    let is_game_over = reveal_cell(&mut commands, &game_board, grid_x, grid_y);
+                    let is_game_over = reveal_cell(&mut commands, game_board, cell_query, sprite_query, grid_x, grid_y);
                     if is_game_over {
                         game_state.is_game_over = true;
                         println!("Game Over!");
