@@ -91,7 +91,7 @@
 // }
 
 use bevy::prelude::*;
-use bevy_game::MineSweeperPlugin;
+use bevy_game::games::MineSweeperPlugin;
 fn main() {
     App::new()
         .add_plugins((

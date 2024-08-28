@@ -1,4 +1,4 @@
-mod games;
+pub mod games;
 
 // #![allow(clippy::type_complexity)]
 

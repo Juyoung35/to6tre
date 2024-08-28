@@ -2,93 +2,14 @@
 // use bevy::input::mouse::MouseButtonInput;
 // use rand::Rng;
 
-
-
-// fn setup(
-//     mut commands: Commands,
-//     mut game_board: ResMut<GameBoard>
-// ) {
-//     commands.spawn(Camera2dBundle::default());
-
-//     for y in 0..GRID_SIZE {
-//         let mut row = Vec::new();
-//         for x in 0..GRID_SIZE {
-//             let cell = commands
-//                 .spawn((
-//                     SpriteBundle {
-//                         sprite: Sprite {
-//                             color: Color::Srgba(0.5, 0.5, 0.5, 1.0),
-//                             custom_size: Some(Vec2::new(30.0, 30.0)),
-//                             ..default()
-//                         },
-//                         transform: Transform::from_xyz(
-//                             (x as f32 - GRID_SIZE as f32 / 2.0) * 32.0,
-//                             (y as f32 - GRID_SIZE as f32 / 2.0) * 32.0,
-//                             0.0,
-//                         ),
-//                         ..default()
-//                     },
-//                     Cell {
-//                         is_revealed: false,
-//                         cell_type: CellType::Clue(0),
-//                     },
-//                 ))
-//                 .id();
-//             row.push(cell);
-//         }
-//         game_board.cells.push(row);
-//     }
-// }
-
 // fn generate_puzzle(
 //     commands: &mut Commands,
 //     game_board: Res<GameBoard>,
 //     cell_query: Query<(Entity, &Transform, &mut Cell)>,
 //     start_x: usize, start_y: usize) {
-//     let mut rng = rand::thread_rng();
 
-//     // Place mines
-//     for y in 0..GRID_SIZE {
-//         for x in 0..GRID_SIZE {
-//             if x == start_x && y == start_y {
-//                 continue; // Ensure the starting cell is not a mine
-//             }
-//             let is_mine = rng.gen::<f32>() < MINE_CHANCE;
-//             if !is_mine { continue }
-//             if let Some((_, _, cell)) = cell_query.get_mut(game_board.cells[y][x]) {
-//                 cell.cell_type = CellType::Mine;
-//             }
-//         }
-//     }
 
-//     // Calculate adjacent mines
-//     for y in 0..GRID_SIZE {
-//         for x in 0..GRID_SIZE {
-//             let mut count = 0;
-//             for dy in -1..=1 {
-//                 for dx in -1..=1 {
-//                     if dx == 0 && dy == 0 {
-//                         continue;
-//                     }
-//                     let nx = x as i32 + dx;
-//                     let ny = y as i32 + dy;
-//                     if nx >= 0 && nx < GRID_SIZE as i32 && ny >= 0 && ny < GRID_SIZE as i32 {
-//                         if let Some(neighbor) = commands.get_entity(game_board.cells[ny as usize][nx as usize]) {
-//                             if let CellType::Mine = cell_query.get(neighbor).unwrap().cell_type {
-//                                 count += 1;
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//             if let Some((_, _, cell)) = cell_query.get_mut(game_board.cells[y][x]) {
-//                 cell.cell_type = CellType::Clue(count);
-//             }
-//         }
-//     }
 
-//     game_board.is_generated = true;
-// }
 
 // fn reveal_cell(
 //     commands: &mut Commands,
@@ -196,12 +117,17 @@
 //     }
 // }
 use bevy::prelude::*;
+use rand::Rng;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug)]
 enum CellType {
     Mine,
-    #[default]
     Clue(usize),
+}
+impl Default for CellType {
+    fn default() -> Self {
+        Self::Clue(0)
+    }
 }
 
 #[derive(Component, Clone, Copy, Debug, Default)]
@@ -210,7 +136,7 @@ struct Cell {
     cell_type: CellType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 struct GameBoard {
     mine_chance: f32,
     grid_size: usize,
@@ -218,14 +144,14 @@ struct GameBoard {
     grid: Vec<Vec<Entity>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 enum GameState {
     GameOver,
     InGame,
     Win,
 }
 
-struct MineSweeperPlugin {
+pub struct MineSweeperPlugin {
     mine_chance: f32,
     grid_size: usize,
 }
@@ -250,18 +176,19 @@ impl Plugin for MineSweeperPlugin {
         app
             .insert_resource(game_board)
             .insert_resource(game_state)
-            .add_systems(Startup, setup)
+            .add_systems(Startup, setup);
             // .add_systems(Update, cell_click);
     }
 }
 
 fn setup(
     mut commands: Commands,
-    mut game_board: ResMut<GameBoard>,
+    game_board: ResMut<GameBoard>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let GameBoard { grid_size, grid, .. } = game_board;
+    let GameBoard { grid_size, grid, .. } = game_board.into_inner();
+    let grid_size = *grid_size;
     for y in 0..grid_size {
         let mut row = Vec::new();
         for x in 0..grid_size {
@@ -269,25 +196,84 @@ fn setup(
                 .spawn((
                     SpriteBundle {
                         sprite: Sprite {
-                            color: Color::Srgba(0.5, 0.5, 0.5, 1.0),
+                            color: Color::srgb(0.5, 0.5, 0.5),
                             custom_size: Some(Vec2::new(30.0, 30.0)),
                             ..default()
                         },
                         transform: Transform::from_xyz(
-                            (x as f32 - GRID_SIZE as f32 / 2.0) * 32.0,
-                            (y as f32 - GRID_SIZE as f32 / 2.0) * 32.0,
+                            (x as f32 - grid_size as f32 / 2.0) * 32.0,
+                            (y as f32 - grid_size as f32 / 2.0) * 32.0,
                             0.0,
                         ),
                         ..default()
                     },
-                    Cell {
-                        is_revealed: false,
-                        cell_type: CellType::Clue(0),
-                    },
+                    Cell::default(),
                 ))
                 .id();
             row.push(cell);
         }
         grid.push(row);
     }
+}
+
+fn generate_puzzle(
+    commands: &mut Commands,
+    game_board: ResMut<GameBoard>,
+    query: Query<&mut Cell>,
+    start_x: usize,
+    start_y: usize,
+) {
+    let GameBoard { grid_size, mine_chance, grid, is_generated } = game_board.into_inner();
+    let grid_size = *grid_size;
+    let mut rng = rand::thread_rng();
+
+    // Place mines
+    for y in 0..grid_size {
+        for x in 0..grid_size {
+            if y == start_y && x == start_x {
+                continue; // Ensure the starting cell is not a mine
+            }
+            let is_mine = rng.gen::<f32>() < *mine_chance;
+            if !is_mine { continue }
+            let cell_id = grid[y][x];
+            if let Ok(cell) = query.get_mut(cell_id) {
+                cell.cell_type = CellType::Mine;
+            } else {
+                error!("Failed to get cell from Cell query!");
+            }
+        }
+    }
+
+    // Calculate adjacent mines
+    for y in 0..grid_size {
+        for x in 0..grid_size {
+            if let Ok(cell) = query.get(grid[y][x]) {
+                if let CellType::Mine = cell.cell_type { continue }
+            }
+            let mut count = 0;
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    if dy == 0 && dx == 0 { continue                     }
+                    let nx = x as i32 + dx;
+                    let ny = y as i32 + dy;
+                    if nx >= 0 && nx < grid_size as i32 && ny >= 0 && ny < grid_size as i32 {
+                        let cell_id = grid[ny as usize][nx as usize];
+                        if let Ok(neighbor_cell) = query.get(cell_id) {
+                            if let CellType::Mine = neighbor_cell.cell_type {
+                                count += 1;
+                            }
+                        } else {
+                            error!("Failed to get neighbor_cell from Cell query!");
+                        }
+                    }
+                }
+            }
+            if let Ok(cell) = query.get_mut(cell_id) {
+                if let CellType::Clue(num) = cell.cell_type {
+                    num = count;
+                }
+            } else { unreachable!() }
+        }
+    }
+    *is_generated = true;
 }
