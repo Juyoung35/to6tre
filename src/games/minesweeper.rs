@@ -1,16 +1,3 @@
-// use bevy::prelude::*;
-// use bevy::input::mouse::MouseButtonInput;
-// use rand::Rng;
-
-// fn generate_puzzle(
-//     commands: &mut Commands,
-//     game_board: Res<GameBoard>,
-//     cell_query: Query<(Entity, &Transform, &mut Cell)>,
-//     start_x: usize, start_y: usize) {
-
-
-
-
 // fn reveal_cell(
 //     commands: &mut Commands,
 //     game_board: Res<GameBoard>,
@@ -73,49 +60,6 @@
 //     false
 // }
 
-// fn cell_click(
-//     mut commands: Commands,
-//     mut mouse_button_events: EventReader<MouseButtonInput>,
-//     mut game_board: Res<GameBoard>,
-//     mut game_state: ResMut<GameState>,
-//     camera_query: Query<(&Camera, &GlobalTransform)>,
-//     cell_query: Query<(Entity, &Transform, &mut Cell)>,
-//     sprite_query: Query<&mut Sprite>,
-// ) {
-//     if game_state.is_game_over {
-//         return;
-//     }
-
-//     if mouse_button.just_pressed(MouseButton::Left) {
-//         let (camera, camera_transform) = camera_query.single();
-//         let window = mouse_butto_events.read().window.get_primary().unwrap();
-
-//         if let Some(world_position) = window.cursor_position()
-//             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
-//             .map(|ray| ray.origin.truncate())
-//         {
-//             for (entity, transform, cell) in cell_query.iter() {
-//                 let cell_pos = transform.translation.truncate();
-//                 if world_position.distance(cell_pos) < 15.0 && !cell.is_revealed {
-//                     let grid_x = ((cell_pos.x + (GRID_SIZE as f32 / 2.0) * 32.0) / 32.0) as usize;
-//                     let grid_y = ((cell_pos.y + (GRID_SIZE as f32 / 2.0) * 32.0) / 32.0) as usize;
-
-//                     if !game_board.is_generated {
-//                         generate_puzzle(&mut commands, game_board, cell_query, grid_x, grid_y);
-//                     }
-
-//                     let is_game_over = reveal_cell(&mut commands, game_board, cell_query, sprite_query, grid_x, grid_y);
-//                     if is_game_over {
-//                         game_state.is_game_over = true;
-//                         println!("Game Over!");
-//                     }
-
-//                     break;
-//                 }
-//             }
-//         }
-//     }
-// }
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -134,6 +78,15 @@ impl Default for CellType {
 struct Cell {
     is_revealed: bool,
     cell_type: CellType,
+    pos: (usize, usize),
+}
+impl Cell {
+    fn new(pos: (usize, usize)) -> Self {
+        Self {
+            pos,
+            ..default()
+        }
+    }
 }
 
 #[derive(Debug, Resource)]
@@ -149,6 +102,14 @@ enum GameState {
     GameOver,
     InGame,
     Win,
+}
+impl GameState {
+    fn get(&self) -> &Self {
+        self
+    }
+    fn get_mut(&mut self) -> &mut Self {
+        self
+    }
 }
 
 pub struct MineSweeperPlugin {
@@ -176,8 +137,8 @@ impl Plugin for MineSweeperPlugin {
         app
             .insert_resource(game_board)
             .insert_resource(game_state)
-            .add_systems(Startup, setup);
-            // .add_systems(Update, cell_click);
+            .add_systems(Startup, setup)
+            .add_systems(Update, cell_click);
     }
 }
 
@@ -207,7 +168,7 @@ fn setup(
                         ),
                         ..default()
                     },
-                    Cell::default(),
+                    Cell::new((y, x)),
                 ))
                 .id();
             row.push(cell);
@@ -217,9 +178,8 @@ fn setup(
 }
 
 fn generate_puzzle(
-    commands: &mut Commands,
     game_board: ResMut<GameBoard>,
-    query: Query<&mut Cell>,
+    mut query: Query<&mut Cell>,
     start_x: usize,
     start_y: usize,
 ) {
@@ -236,7 +196,7 @@ fn generate_puzzle(
             let is_mine = rng.gen::<f32>() < *mine_chance;
             if !is_mine { continue }
             let cell_id = grid[y][x];
-            if let Ok(cell) = query.get_mut(cell_id) {
+            if let Ok(ref mut cell) = query.get_mut(cell_id) {
                 cell.cell_type = CellType::Mine;
             } else {
                 error!("Failed to get cell from Cell query!");
@@ -247,7 +207,8 @@ fn generate_puzzle(
     // Calculate adjacent mines
     for y in 0..grid_size {
         for x in 0..grid_size {
-            if let Ok(cell) = query.get(grid[y][x]) {
+            let cell_id = grid[y][x];
+            if let Ok(cell) = query.get(cell_id) {
                 if let CellType::Mine = cell.cell_type { continue }
             }
             let mut count = 0;
@@ -257,8 +218,8 @@ fn generate_puzzle(
                     let nx = x as i32 + dx;
                     let ny = y as i32 + dy;
                     if nx >= 0 && nx < grid_size as i32 && ny >= 0 && ny < grid_size as i32 {
-                        let cell_id = grid[ny as usize][nx as usize];
-                        if let Ok(neighbor_cell) = query.get(cell_id) {
+                        let neighbor_id = grid[ny as usize][nx as usize];
+                        if let Ok(neighbor_cell) = query.get(neighbor_id) {
                             if let CellType::Mine = neighbor_cell.cell_type {
                                 count += 1;
                             }
@@ -268,12 +229,68 @@ fn generate_puzzle(
                     }
                 }
             }
-            if let Ok(cell) = query.get_mut(cell_id) {
-                if let CellType::Clue(num) = cell.cell_type {
-                    num = count;
+            if let Ok(mut cell) = query.get_mut(cell_id) {
+                if let CellType::Clue(ref mut num) = cell.cell_type {
+                    *num = count;
                 }
             } else { unreachable!() }
         }
     }
     *is_generated = true;
+}
+
+fn cell_click(
+    mut commands: Commands,
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window>,
+    mut game_board: Res<GameBoard>,
+    mut game_state: ResMut<GameState>,
+    camera_query: Query<(&Camera, &GlobalTransform)>,
+    trans_query: Query<&Transform>,
+    mut cell_query: Query<&mut Cell>,
+    mut sprite_query: Query<&mut Sprite>,
+) {
+    let is_game_over = if let GameState::GameOver = *game_state.get() {
+        true
+    }  else { false };
+    if game_over { return }
+
+    if mouse_button_input.pressed(MouseButton::Left) {
+        let GameBoard { grid_size, grid, is_generated, .. } = game_board.into_inner();
+        let grid_size = *grid_size;
+        ;
+            let (camera, camera_transform) = camera_query.single();
+
+            let Some(cursor_position) = windows.single().cursor_position()
+            let window = window.get_primary().unwrap();;
+
+            if let Some(world_position) = window.cursor_position()
+            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+            .map(|ray| ray.origin.truncate())
+            {
+
+                trans_query.get()
+                for (entity, transform, cell) in cell_query.iter() {
+                    let cell_pos = transform.translation.truncate();
+                    if world_position.distance(cell_pos) < 15.0 && !cell.is_revealed {
+                        let grid_x = ((cell_pos.x + (grid_size as f32 / 2.0) * 32.0) / 32.0) as usize;
+                        let grid_y = ((cell_pos.y + (grid_size as f32 / 2.0) * 32.0) / 32.0) as usize;
+
+                        if !is_generated {
+                            generate_puzzle(game_board, cell_query, grid_x, grid_y);
+                        }
+
+                        // let is_game_over = reveal_cell(&mut commands, game_board, cell_query, sprite_query, grid_x, grid_y);
+                        if is_game_over {
+                            let state = game_state.get_mut();
+                            *state = GameState::GameOver;
+                            println!("Game Over!");
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
