@@ -253,44 +253,40 @@ fn cell_click(
     let is_game_over = if let GameState::GameOver = *game_state.get() {
         true
     }  else { false };
-    if game_over { return }
+    if is_game_over { return }
 
     if mouse_button_input.pressed(MouseButton::Left) {
         let GameBoard { grid_size, grid, is_generated, .. } = game_board.into_inner();
         let grid_size = *grid_size;
-        ;
-            let (camera, camera_transform) = camera_query.single();
+        let (camera, camera_transform) = camera_query.single();
 
-            let Some(cursor_position) = windows.single().cursor_position()
-            let window = window.get_primary().unwrap();;
-
-            if let Some(world_position) = window.cursor_position()
+        if let Some(world_position) = windows.single().cursor_position()
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
-            .map(|ray| ray.origin.truncate())
-            {
+            .map(|ray| ray.origin.truncate()) 
+        {
+            println!("{world_position:?}");
+        //     trans_query.get()
+        //         for (entity, transform, cell) in cell_query.iter() {
+        //             let cell_pos = transform.translation.truncate();
+        //             if world_position.distance(cell_pos) < 15.0 && !cell.is_revealed {
+        //                 let grid_x = ((cell_pos.x + (grid_size as f32 / 2.0) * 32.0) / 32.0) as usize;
+        //                 let grid_y = ((cell_pos.y + (grid_size as f32 / 2.0) * 32.0) / 32.0) as usize;
 
-                trans_query.get()
-                for (entity, transform, cell) in cell_query.iter() {
-                    let cell_pos = transform.translation.truncate();
-                    if world_position.distance(cell_pos) < 15.0 && !cell.is_revealed {
-                        let grid_x = ((cell_pos.x + (grid_size as f32 / 2.0) * 32.0) / 32.0) as usize;
-                        let grid_y = ((cell_pos.y + (grid_size as f32 / 2.0) * 32.0) / 32.0) as usize;
+        //                 if !is_generated {
+        //                     generate_puzzle(game_board, cell_query, grid_x, grid_y);
+        //                 }
 
-                        if !is_generated {
-                            generate_puzzle(game_board, cell_query, grid_x, grid_y);
-                        }
+        //                 // let is_game_over = reveal_cell(&mut commands, game_board, cell_query, sprite_query, grid_x, grid_y);
+        //                 if is_game_over {
+        //                     let state = game_state.get_mut();
+        //                     *state = GameState::GameOver;
+        //                     println!("Game Over!");
+        //                 }
 
-                        // let is_game_over = reveal_cell(&mut commands, game_board, cell_query, sprite_query, grid_x, grid_y);
-                        if is_game_over {
-                            let state = game_state.get_mut();
-                            *state = GameState::GameOver;
-                            println!("Game Over!");
-                        }
-
-                        break;
-                    }
-                }
-            }
+        //                 break;
+        //             }
+        //         }
+        //     }
         }
     }
 }
