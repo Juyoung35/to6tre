@@ -10,10 +10,11 @@ use bevy_game::GamePlugin; // ToDo: Replace bevy_game with your new crate name.
 use std::io::Cursor;
 use winit::window::Icon;
 
+use web_sys::console;
 use bevy_game::games::MineSweeperPlugin;
 
 fn main() {
-    web_sys::console_log_1!(&"Hello, world!".into());
+    unsafe { console::log_1(&"Hello, world!".into()); }
     App::new()
         .insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::linear_rgb(0.4, 0.4, 0.4)))
