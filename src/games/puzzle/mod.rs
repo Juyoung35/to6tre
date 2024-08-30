@@ -6,6 +6,10 @@ mod position_rule;
 use bevy::prelude::*;
 use rand::prelude::*;
 use std::marker::PhantomData;
+use std::hash::Hash;
+
+use cell::Cell;
+use grid::Grid;
 
 pub struct PuzzleRule<C: Cell> {
     pub description: String,
@@ -27,7 +31,7 @@ impl<C: Cell> PuzzleDefinition<C> {
         let mut rng = StdRng::seed_from_u64(seed);
         // Initialize an empty grid
         let mut grid = Grid {
-            grid: vec![vec![C::default(); cols]; rows],
+            cells: vec![vec![C::default(); cols]; rows],
             rows,
             cols,
         };
@@ -231,11 +235,11 @@ pub struct GridPlugin<C: Cell + Component> {
 impl<C: Cell + Component> Plugin for GridPlugin<C> {
     fn build(&self, app: &mut App) {
         app.init_resource::<Grid<C>>()
-           .add_system(update_grid::<C>);
+           .add_systems(Update, update_grid::<C>);
     }
 }
 
-fn update_grid<C: Cell + Component>(mut grid: ResMut<Grid<C>>) {
+fn update_grid<C: Cell + Component>(grid: ResMut<Grid<C>>) {
     // Implementation of grid update logic...
 }
 

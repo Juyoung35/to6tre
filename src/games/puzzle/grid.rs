@@ -1,9 +1,10 @@
 use super::*;
 
-pub struct Grid<C: Cell> {
-    cells: Vec<Vec<C>>,
-    rows: usize,
-    cols: usize,
+#[derive(Resource, Default)]
+pub struct Grid<C: Cell + Default> {
+    pub cells: Vec<Vec<C>>,
+    pub rows: usize,
+    pub cols: usize,
 }
 
 impl<C: Cell> Grid<C> {
