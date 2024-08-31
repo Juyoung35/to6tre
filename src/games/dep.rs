@@ -4,9 +4,9 @@
 // pub use minesweeper::MineSweeperPlugin;
 
 use bevy::prelude::*;
-use bevy::text::Text2dBounds;
-use bevy::sprite::Anchor;
 use rand::Rng;
+// use rand::SeedableRng;
+// use rand_chacha::ChaCha8Rng;
 
 const GRID_SIZE: usize = 10;
 const MINE_COUNT: usize = 15;
@@ -23,9 +23,6 @@ impl Plugin for MSPlugin {
             .observe(check_win_condition);
     }
 }
-
-#[derive(Component)]
-struct GameTitle;
 
 #[derive(Component)]
 struct Cell {
@@ -68,6 +65,47 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut game_state:
         .map(|_| (rng.gen_range(0..GRID_SIZE), rng.gen_range(0..GRID_SIZE)))
         .collect();
 
+    let root = commands
+        .spawn(NodeBundle {
+            style: Style {
+                margin: UiRect::all(Val::Px(25.0)),
+                align_self: AlignSelf::Stretch,
+                justify_self: JustifySelf::Stretch,
+                flex_wrap: FlexWrap::Wrap,
+                justify_content: JustifyContent::FlexStart,
+                align_items: AlignItems::FlexStart,
+                align_content: AlignContent::FlexStart,
+                ..Default::default()
+            },
+            background_color: Color::srgb(0.25, 0.25, 0.25).into(),
+            ..Default::default()
+        })
+        .id();
+
+    let game_board_node = commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Px(50.),
+                    height: Val::Px(50.),
+                    // border,
+                    margin: UiRect::all(Val::Px(20.)),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    ..Default::default()
+                },
+                // background_color: Color::srgb(0.5, 0.0, 0.0),
+                // border_color: Color::srgb(1.0, 0.0, 0.0),
+                ..Default::default()
+            },
+            // Outline {
+            //     width: Val::Px(6.),
+            //     offset: Val::Px(6.),
+            //     color: Color::WHITE,
+            // },
+        ))
+        .id();
+
     for y in 0..GRID_SIZE {
         let mut row = Vec::new();
         for x in 0..GRID_SIZE {
@@ -86,7 +124,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut game_state:
                     cell,
                     SpriteBundle {
                         sprite: Sprite {
-                            color: Color::srgb(0.75, 0.75, 0.75),
+                            color: Color::srgb(0.5, 0.5, 0.5),
                             custom_size: Some(Vec2::new(CELL_SIZE, CELL_SIZE)),
                             ..default()
                         },
@@ -97,63 +135,53 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut game_state:
                         ),
                         ..default()
                     },
-                    // Outline {
-                    //     width: Val::Px(6.),
-                    //     offset: Val::Px(6.),
-                    //     color: Color::WHITE,
-                    // },
                 ))
-                .with_children(|builder| {
-                    builder.spawn(Text2dBundle {
-                        text: Text {
-                            sections: vec![TextSection::new(
-                                "",
-                                TextStyle {
-                                    font_size: 32.0,
-                                    color: Color::BLACK,
-                                    ..default()
-                                },
-                            )],
-                            justify: JustifyText::Left,
-                            // linebreak_behavior: BreakLineOn::WordBoundary,
-                            ..default()
-                        },
-                        // text_anchor: Anchor::CenterRight,
-                        text_2d_bounds: Text2dBounds {
-                            // Wrap text in the rectangle
-                            // size: box_size,
-                            size: Vec2::new(CELL_SIZE, CELL_SIZE),
-                        },
-                        // ensure the text is drawn on top of the box
-                        transform: Transform::from_translation(Vec3::Z),
-                        ..default()
-                    });
-                })
                 .id();
 
             row.push(entity);
+            commands.entity(game_board_node).add_child(entity);
         }
         game_state.grid.push(row);
     }
 
-    commands
-        .spawn((
-            TextBundle::from_section(
-                "MineSweeper",
-                TextStyle {
-                    font_size: 48.0,
-                    color: Color::WHITE,
-                    ..Default::default()
-                })
-                .with_style(Style {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(5.0),
-                    left: Val::Px(5.0),
-                    ..default()
-                }
-            ),
-            GameTitle,
-        ));
+    // let text_node = commands.spawn(
+    //     Text2dBundle {
+    //         text: Text::from_section("Minesweeper", TextStyle {
+    //             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+    //             font_size: 60.0,
+    //             ..default()
+    //         })
+    //             .with_justify(JustifyText::Center),
+    //         ..default()
+    //     }.with_style(Style {
+    //         position_type: PositionType::Absolute,
+    //         bottom: Val::Px(5.0),
+    //         right: Val::Px(5.0),
+    //         ..default()
+    //     }),
+    // ).id();
+    let label_node = commands
+        .spawn(TextBundle::from_section(
+            "MineSweeper",
+            TextStyle {
+                font_size: 9.0,
+                ..Default::default()
+            },
+        ))
+        .id();
+
+    let container = commands
+        .spawn(NodeBundle {
+            style: Style {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .push_children(&[game_board_node, label_node])
+        .id();
+    commands.entity(root).add_child(container);
 }
 
 fn count_adjacent_mines(x: usize, y: usize, mines: &[(usize, usize)]) -> u8 {
@@ -195,10 +223,16 @@ fn handle_click(
             .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
             .map(|ray| ray.origin.truncate())
         {
-            let x = ((world_position.x + (GRID_SIZE as f32 * CELL_SIZE / 2.0)) / CELL_SIZE).floor() as usize;
-            let y = ((world_position.y + (GRID_SIZE as f32 * CELL_SIZE / 2.0)) / CELL_SIZE).floor() as usize;
+            let grid_x = (world_position.x + (GRID_SIZE as f32 * CELL_SIZE / 2.0)) / CELL_SIZE;
+            let grid_y = (world_position.y + (GRID_SIZE as f32 * CELL_SIZE / 2.0)) / CELL_SIZE;
 
-            if x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE {
+            if grid_x >= 0.0
+                && grid_x < GRID_SIZE as f32
+                && grid_y >= 0.0
+                && grid_y < GRID_SIZE as f32
+            {
+                let x = grid_x as usize;
+                let y = grid_y as usize;
                 let entity = game_state.grid[y][x];
                 commands.trigger_targets(RevealCell { entity }, entity);
             }
@@ -208,14 +242,12 @@ fn handle_click(
 
 fn reveal_cell(
     trigger: Trigger<RevealCell>,
-    mut cell_query: Query<(Entity, &mut Cell, &mut Sprite)>,
-    children_query: Query<&Children>,
-    mut text_query: Query<&mut Text>,
+    mut cell_query: Query<(&mut Cell, &mut Sprite)>,
     game_state: Res<GameState>,
     mut commands: Commands,
 ) {
-    let trigger_entity = trigger.event().entity;
-    let (cell_entity, mut cell, mut sprite) = cell_query.get_mut(trigger_entity).unwrap();
+    let entity = trigger.event().entity;
+    let (mut cell, mut sprite) = cell_query.get_mut(entity).unwrap();
 
     if cell.is_revealed {
         return;
@@ -244,12 +276,6 @@ fn reveal_cell(
                         let neighbor_entity = game_state.grid[ny as usize][nx as usize];
                         commands.trigger_targets(RevealCell { entity: neighbor_entity }, neighbor_entity);
                     }
-                }
-            }
-        } else {
-            for descendant_entity in children_query.iter_descendants(cell_entity) {
-                if let Ok(mut text) = text_query.get_mut(descendant_entity) {
-                    text.sections[0].value = cell.adjacent_mines.to_string();
                 }
             }
         }
@@ -283,7 +309,7 @@ fn check_win_condition(
 
 fn update_text(
     game_state: Res<GameState>,
-    mut text_query: Query<&mut Text, With<GameTitle>>,
+    mut text_query: Query<&mut Text>,
     cell_query: Query<&Cell>,
 ) {
     let mut text = text_query.get_single_mut().unwrap();

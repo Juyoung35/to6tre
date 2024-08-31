@@ -11,13 +11,14 @@ use std::io::Cursor;
 use winit::window::Icon;
 
 use web_sys::console;
-use bevy_game::games::MineSweeperPlugin;
+// use bevy_game::games::MineSweeperPlugin;
+use bevy_game::games::MSPlugin;
 
 fn main() {
     unsafe { console::log_1(&"Hello, world!".into()); }
     App::new()
         .insert_resource(Msaa::Off)
-        .insert_resource(ClearColor(Color::linear_rgb(0.4, 0.4, 0.4)))
+        .insert_resource(ClearColor(Color::linear_rgb(0.25, 0.25, 0.25)))
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -38,7 +39,8 @@ fn main() {
                 }),
         )
         // .add_plugins(GamePlugin)
-        .add_plugins(MineSweeperPlugin::default())
+        // .add_plugins(MineSweeperPlugin::default())
+        .add_plugins(MSPlugin)
         .add_systems(Startup, set_window_icon)
         .run();
 }
