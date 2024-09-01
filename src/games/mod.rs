@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use bevy_mod_picking::prelude::*;
 use rand::Rng;
 use std::fmt::Debug;
+use bevy::color::palettes::css::*;
+use web_sys::console;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct UVec2<T>
@@ -70,10 +72,19 @@ pub struct MSGameBoard {
     pub grid_size: usize,
     pub mine_count: usize,
 }
+impl MSGameBoard {
+    fn new(grid_size: usize, mine_count: usize) -> Self {
+        Self {
+            grid_size,
+            mine_count,
+            ..default()
+        }
+    }
+}
 
 #[derive(Event)]
 struct RevealCell {
-    entity: Entity,
+    pos: UVec2<usize>,
 }
 
 #[derive(Event)]
@@ -85,15 +96,18 @@ pub struct MineSweeperPlugin;
 impl Plugin for MineSweeperPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(DefaultPickingPlugins)
             .insert_resource(MSGameState::Progressing)
-            .init_resource::<MSGameBoard>()
+            .insert_resource(MSGameBoard::new(10, 15))
+            .add_systems(Startup, spawn_layout)
             .observe(check_win_condition)
             .observe(reveal_cell);
     }
 }
+
 fn spawn_mines(
     init_pos: UVec2<usize>,
-    mut cell_query: Query<&mut MSCell>,
+    mut cell_query: &mut Query<(&mut MSCell, &mut BackgroundColor)>,
     game_board: Res<MSGameBoard>,
 ) {
     let mut rng = rand::thread_rng();
@@ -105,7 +119,7 @@ fn spawn_mines(
         let [x, y] = [0; 2].map(|_| rng.gen_range(0..grid_size));
         if x == init_pos.x && y == init_pos.y { continue }
         if let Some(&cell_entity) = game_board.cells.get(y).and_then(|row| row.get(x)) {
-            if let Ok(mut cell) = cell_query.get_mut(cell_entity) {
+            if let Ok((mut cell, _)) = cell_query.get_mut(cell_entity) {
                 if let MSCellState::Mine = cell.cell_state { continue }
                 cell.cell_state = MSCellState::Mine;
                 spawned_mines += 1;
@@ -116,12 +130,12 @@ fn spawn_mines(
     for y in 0..grid_size {
         for x in 0..grid_size {
             if let Some(cell_entity) = game_board.cells.get(y).and_then(|row| row.get(x)) {
-                if let Ok(cell) = cell_query.get(*cell_entity) {
+                if let Ok((cell, _)) = cell_query.get(*cell_entity) {
                     if let MSCellState::Mine = cell.cell_state {
                         for ry in y.saturating_sub(1)..=usize::min(y + 1, grid_size - 1) {
                             for rx in x.saturating_sub(1)..=usize::min(x + 1, grid_size - 1) {
                                 if ry == y && rx == x { continue }
-                                if let MSCellState::Adjacent(ref mut count) = cell_query.get_mut(game_board.cells[ry][rx]).unwrap().cell_state { *count += 1 }
+                                if let MSCellState::Adjacent(ref mut count) = cell_query.get_mut(game_board.cells[ry][rx]).unwrap().0.cell_state { *count += 1 }
                             }
                         }
                     }
@@ -199,13 +213,13 @@ fn spawn_layout(
                         padding: UiRect::all(Val::Px(24.0)),
                         // Set the grid to have 4 columns all with sizes minmax(0, 1fr)
                         // This creates 4 exactly evenly sized columns
-                        grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
+                        grid_template_columns: RepeatedGridTrack::flex(grid_size as u16, 1.0),
                         // Set the grid to have 4 rows all with sizes minmax(0, 1fr)
                         // This creates 4 exactly evenly sized rows
-                        grid_template_rows: RepeatedGridTrack::flex(4, 1.0),
+                        grid_template_rows: RepeatedGridTrack::flex(grid_size as u16, 1.0),
                         // Set a 12px gap/gutter between rows and columns
-                        row_gap: Val::Px(12.0),
-                        column_gap: Val::Px(12.0),
+                        row_gap: Val::Px(1.0),
+                        column_gap: Val::Px(1.0),
                         ..default()
                     },
                     background_color: BackgroundColor(Color::srgb(0.25, 0.25, 0.25)),
@@ -223,58 +237,35 @@ fn spawn_layout(
                         for x in 0..grid_size {
                             let entity_id = builder
                                 .spawn((
-                                    MSCell::new(x, y),
+                                    PickableBundle::default(),
                                     NodeBundle {
                                         style: Style {
                                             display: Display::Grid,
                                             padding: UiRect::all(Val::Px(3.0)),
                                             ..default()
                                         },
-                                        background_color: BackgroundColor(Color::srgb(0.5, 0.5, 0.5)),
+                                        background_color: BackgroundColor(Color::srgb(0.75, 0.75, 0.75)),
                                         ..default()
                                     },
-                                    Outline {
-                                        width: Val::Px(6.),
-                                        offset: Val::Px(6.),
-                                        color: Color::srgb(0.75, 0.75, 0.75),
-                                    },
+                                    MSCell::new(x, y),
                                 ))
                                 .with_children(|builder| {
                                     builder.spawn(TextBundle::from_section(
                                         " ",
                                         TextStyle {
                                             font: font.clone(),
-                                            font_size: 5.0,
+                                            font_size: 48.0,
                                             color: Color::BLACK,
                                         },
                                     ));
                                 })
                                 // .with_children(|builder| {
-                                //     builder.spawn(NodeBundle {
-                                //         background_color: BackgroundColor(color.into()),
-                                //         ..default()
-                                //     });
+
                                 // })
                                 .id();
                             cells[y].push(entity_id);
                         }
                     }
-                    // item_rect(builder, ORANGE);
-                    // item_rect(builder, BISQUE);
-                    // item_rect(builder, BLUE);
-                    // item_rect(builder, CRIMSON);
-                    // item_rect(builder, AQUA);
-                    // item_rect(builder, ORANGE_RED);
-                    // item_rect(builder, DARK_GREEN);
-                    // item_rect(builder, FUCHSIA);
-                    // item_rect(builder, TEAL);
-                    // item_rect(builder, ALICE_BLUE);
-                    // item_rect(builder, CRIMSON);
-                    // item_rect(builder, ANTIQUE_WHITE);
-                    // item_rect(builder, YELLOW);
-                    // item_rect(builder, DEEP_PINK);
-                    // item_rect(builder, YELLOW_GREEN);
-                    // item_rect(builder, SALMON);
                 });
 
             // Right side bar (auto placed in row 2, column 2)
@@ -300,7 +291,7 @@ fn spawn_layout(
                 })
                 .with_children(|builder| {
                     builder.spawn(TextBundle::from_section(
-                        "Sidebar",
+                        "Game State",
                         TextStyle {
                             font: font.clone(),
                             font_size: 24.0,
@@ -308,7 +299,7 @@ fn spawn_layout(
                         },
                     ));
                     builder.spawn(TextBundle::from_section(
-                        "A paragraph of text which ought to wrap nicely. A paragraph of text which ought to wrap nicely. A paragraph of text which ought to wrap nicely. A paragraph of text which ought to wrap nicely. A paragraph of text which ought to wrap nicely. A paragraph of text which ought to wrap nicely. A paragraph of text which ought to wrap nicely.",
+                        "Revealed : 0 / 0",
                         TextStyle {
                             font: font.clone(),
                             font_size: 16.0,
@@ -338,7 +329,7 @@ fn spawn_layout(
                     On::<Pointer<Click>>::commands_mut(move |click, commands| {
                         match click.button {
                             PointerButton::Primary => {
-                                commands.trigger_targets(RevealCell { entity }, entity);
+                                commands.trigger_targets(RevealCell { pos: UVec2::new(x, y) }, entity);
                             },
                             PointerButton::Secondary => {
                                 // TODO: flagging
@@ -389,14 +380,19 @@ fn check_win_condition(
 fn reveal_cell(
     trigger: Trigger<RevealCell>,    
     mut game_state: ResMut<MSGameState>,
-    game_board: Res<MSGameBoard>,
+    mut game_board: ResMut<MSGameBoard>,
     mut cell_query: Query<(&mut MSCell, &mut BackgroundColor)>,
     children_query: Query<&Children>,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
 ) {
-    let triggered_entity = trigger.event().entity;
+    let UVec2 { x, y } = trigger.event().pos;
+    let triggered_entity = game_board.cells[y][x];
     let (mut cell, mut background_color) = cell_query.get_mut(triggered_entity).unwrap();
+    if !game_board.is_mine_spawned {
+        game_board.is_mine_spawned = true;
+        return spawn_mines(UVec2::new(x, y), &mut cell_query, game_board.into());
+    }
 
     if cell.is_revealed { return }
     cell.is_revealed = true;
@@ -416,7 +412,7 @@ fn reveal_cell(
                     for rx in x.saturating_sub(1)..=usize::min(x + 1, grid_size - 1) {
                         if ry == y && rx == x { continue }
                         let neighbor_entity = game_board.cells[ry][rx];
-                        commands.trigger_targets(RevealCell { entity: neighbor_entity }, neighbor_entity);
+                        commands.trigger_targets(RevealCell { pos: UVec2::new(rx, ry) }, neighbor_entity);
                     }
                 }
             } else {
