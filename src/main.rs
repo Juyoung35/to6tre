@@ -11,8 +11,8 @@ use std::io::Cursor;
 use winit::window::Icon;
 
 use web_sys::console;
-// use bevy_game::games::MineSweeperPlugin;
-use bevy_game::games::MSPlugin;
+use bevy_game::games::MineSweeperPlugin;
+// use bevy_game::games::MSPlugin;
 
 fn main() {
     unsafe { console::log_1(&"Hello, world!".into()); }
@@ -39,8 +39,9 @@ fn main() {
                 }),
         )
         // .add_plugins(GamePlugin)
-        // .add_plugins(MineSweeperPlugin::default())
-        .add_plugins(MSPlugin)
+        // .add_plugins(MineSweeperPlugin)
+        // .add_plugins(MSPlugin)
+        .add_plugins(MineSweeperPlugin)
         .add_systems(Startup, set_window_icon)
         .run();
 }
