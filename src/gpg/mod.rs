@@ -1,18 +1,22 @@
+// GPG stands for Grid-based Puzzle Gameuse bevy::prelude::*;
+
 use bevy::prelude::*;
-use bevy_mod_picking::prelude::*;
-use rand::Rng;
-use std::fmt::Debug;
 use bevy::color::palettes::css::*;
+use bevy_mod_picking::prelude::*;
+
 use web_sys::console;
+use rand::Rng;
+
+use std::fmt::Debug;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct UVec2<T>
+struct Point<T>
 where T: Clone + Copy + Debug + PartialEq
 {
     x: T,
     y: T,
 }
-impl<T> UVec2<T>
+impl<T> Point<T>
 where T: Clone + Copy + Debug + PartialEq
 {
     fn new(x: T, y: T) -> Self {
@@ -20,129 +24,165 @@ where T: Clone + Copy + Debug + PartialEq
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-enum MSCellState {
-    Mine,
-    Adjacent(usize),
+#[derive(Clone, Copy, Debug, Default, Component)]
+struct Cell<S: CellState> {
+    pos: Point<usize>,
+    cell_state: S,
 }
-impl Default for MSCellState {
-    fn default() -> Self {
-        Self::Adjacent(0)
-    }
-}
-
-#[derive(Clone, Copy, Debug, Component)]
-struct MSCell {
-    pos: UVec2<usize>,
-    cell_state: MSCellState,
-    is_revealed: bool,
-}
-impl MSCell {
+impl Cell {
     fn new(x: usize, y: usize) -> Self {
         Self {
-            pos: UVec2::new(x, y),
-            cell_state: MSCellState::Adjacent(0),
-            is_revealed: false,
-        }
-    }
-    fn is_mine(&self) -> bool {
-        match self.cell_state {
-            MSCellState::Mine => true,
-            _ => false,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Resource)]
-pub enum MSGameState {
-    GameOver,
-    Progressing,
-    GameWin,
-}
-impl MSGameState {
-    fn is_game_over(&self) -> bool {
-        if let Self::GameOver = self { true } else { false }
-    }
-}
-
-#[derive(Clone, Debug, Default, Resource)]
-pub struct MSGameBoard {
-    pub cells: Vec<Vec<Entity>>,
-    pub is_mine_spawned: bool,
-    pub grid_size: usize,
-    pub mine_count: usize,
-}
-impl MSGameBoard {
-    fn new(grid_size: usize, mine_count: usize) -> Self {
-        Self {
-            grid_size,
-            mine_count,
+            pos: Point::new(x, y),
             ..default()
         }
     }
 }
 
+// https://users.rust-lang.org/t/how-to-parse-enum-macro/36161/4
+// #![feature(trace_macros)]
+// trace_macros! {true}
+
+macro_rules! build_cell_state {
+    // VariantName
+    (
+        @name $name:ident
+        @variants [
+            $($variants:tt)*
+        ]
+        @parsing
+            $VariantName:ident
+            $(, $($input:tt)*)?
+    ) => (build_cell_state! {
+        @name $name
+        @variants [
+            $($variants)*
+            {
+                $VariantName
+            }
+        ]
+        @parsing
+            $( $($input)* )?
+    });
+
+    // VariantName(...)
+    (
+        @name $name:ident
+        @variants [
+            $($variants:tt)*
+        ]
+        @parsing
+            $VariantName:ident ( $($tt:tt)* )
+            $(, $($input:tt)*)?
+    ) => (build_cell_state! {
+        @name $name
+        @variants [
+            $($variants)*
+            {
+                $VariantName ($($tt)*)
+            }
+        ]
+        @parsing
+            $( $($input)* )?
+    });
+
+    // VariantName { ... }
+    (
+        @name $name:ident
+        @variants [
+            $($variants:tt)*
+        ]
+        @parsing
+            $VariantName:ident { $($tt:tt)* }
+            $(, $($input:tt)*)?
+    ) => (build_cell_state! {
+        @name $name
+        @variants [
+            $($variants)*
+            {
+                $VariantName { $($tt)* }
+            }
+        ]
+        @parsing
+            $( $($input)* )?
+    });
+
+    // Done parsing, time to generate code:
+    (
+        @name $name:ident
+        @variants [
+            $(
+                {
+                    $VariantName:ident $($variant_assoc:tt)?
+                }
+            )*
+        ]
+        @parsing
+            // Nothing left to parse
+    ) => (
+        #[derive(Clone, Debug)]
+        enum $name {
+            $(
+                $VariantName $(
+                    $variant_assoc
+                )? ,
+            )*
+        }
+        impl CellState for $name {
+            
+        }
+    );
+
+    // == ENTRY POINT ==
+    (
+        enum $name:ident {
+            $($input:tt)*
+        }
+    ) => (build_cell_state! {
+        @name $name
+        // a sequence of brace-enclosed variants
+        @variants []
+        // remaining tokens to parse
+        @parsing
+            $($input)*
+    });
+}
+
+// todo
+// variant -> {left_next, right_next} => {render}
+
+
+
+trait CellState {
+
+}
+build_cell_state!(
+    enum MSCellState {
+        Mine,
+        // #[default]
+        Adjacent(usize),
+    }
+);
+
 #[derive(Event)]
-struct RevealCell {
-    pos: UVec2<usize>,
+struct CellLeftClick {
+    pos: Point<usize>,
+}
+
+#[derive(Event)]
+struct CellRightClick {
+    pos: Point<usize>,
 }
 
 #[derive(Event)]
 struct CheckWinCondition;
 
-#[derive(Default)]
-pub struct MineSweeperPlugin;
-
-impl Plugin for MineSweeperPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_plugins(DefaultPickingPlugins)
-            .insert_resource(MSGameState::Progressing)
-            .insert_resource(MSGameBoard::new(10, 15))
-            .add_systems(Startup, spawn_layout)
-            .observe(check_win_condition)
-            .observe(reveal_cell);
-    }
-}
-
-fn spawn_mines(
-    init_pos: UVec2<usize>,
-    mut cell_query: &mut Query<(&mut MSCell, &mut BackgroundColor)>,
-    game_board: Res<MSGameBoard>,
-) {
-    let mut rng = rand::thread_rng();
-    let grid_size = game_board.grid_size;
-    let mine_count = game_board.mine_count;
-
-    let mut spawned_mines = 0;
-    while spawned_mines < mine_count {
-        let [x, y] = [0; 2].map(|_| rng.gen_range(0..grid_size));
-        if x == init_pos.x && y == init_pos.y { continue }
-        if let Some(&cell_entity) = game_board.cells.get(y).and_then(|row| row.get(x)) {
-            if let Ok((mut cell, _)) = cell_query.get_mut(cell_entity) {
-                if let MSCellState::Mine = cell.cell_state { continue }
-                cell.cell_state = MSCellState::Mine;
-                spawned_mines += 1;
-            }
-        }
-    }
-
-    for y in 0..grid_size {
-        for x in 0..grid_size {
-            if let Some(cell_entity) = game_board.cells.get(y).and_then(|row| row.get(x)) {
-                if let Ok((cell, _)) = cell_query.get(*cell_entity) {
-                    if let MSCellState::Mine = cell.cell_state {
-                        for ry in y.saturating_sub(1)..=usize::min(y + 1, grid_size - 1) {
-                            for rx in x.saturating_sub(1)..=usize::min(x + 1, grid_size - 1) {
-                                if ry == y && rx == x { continue }
-                                if let MSCellState::Adjacent(ref mut count) = cell_query.get_mut(game_board.cells[ry][rx]).unwrap().0.cell_state { *count += 1 }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
+enum GameState {
+    #[default]
+    // MainMenu,
+    // SettingsMenu,
+    InGame,
+    GameWin,
 }
 
 fn spawn_layout(
@@ -329,10 +369,10 @@ fn spawn_layout(
                     On::<Pointer<Click>>::commands_mut(move |click, commands| {
                         match click.button {
                             PointerButton::Primary => {
-                                commands.trigger_targets(RevealCell { pos: UVec2::new(x, y) }, entity);
+                                commands.trigger_targets(CellLeftClick { pos: Point::new(x, y) }, entity);
                             },
                             PointerButton::Secondary => {
-                                // TODO: flagging
+                                commands.trigger_targets(CellRightClick { pos: Point::new(x, y) }, entity);
                             },
                             _ => (),
                         }
@@ -354,76 +394,4 @@ fn spawn_nested_text_bundle(builder: &mut ChildBuilder, font: Handle<Font>, text
             },
         ),
     );
-}
-
-fn check_win_condition(
-    _trigger: Trigger<CheckWinCondition>,
-    cell_query: Query<&MSCell>,
-    mut game_state: ResMut<MSGameState>,
-) {
-    if game_state.is_game_over() { return }
-
-    let mut all_non_mine_cells_revealed = true;
-    for cell in &cell_query {
-        if cell.is_mine() { continue }
-        if !cell.is_revealed {
-            all_non_mine_cells_revealed = false;
-            break;
-        }
-    }
-
-    if all_non_mine_cells_revealed {
-        *game_state = MSGameState::GameWin;
-    }
-}
-
-fn reveal_cell(
-    trigger: Trigger<RevealCell>,    
-    mut game_state: ResMut<MSGameState>,
-    mut game_board: ResMut<MSGameBoard>,
-    mut cell_query: Query<(&mut MSCell, &mut BackgroundColor)>,
-    children_query: Query<&Children>,
-    mut text_query: Query<&mut Text>,
-    mut commands: Commands,
-) {
-    let UVec2 { x, y } = trigger.event().pos;
-    let triggered_entity = game_board.cells[y][x];
-    let (mut cell, mut background_color) = cell_query.get_mut(triggered_entity).unwrap();
-    if !game_board.is_mine_spawned {
-        game_board.is_mine_spawned = true;
-        return spawn_mines(UVec2::new(x, y), &mut cell_query, game_board.into());
-    }
-
-    if cell.is_revealed { return }
-    cell.is_revealed = true;
-
-    let grid_size = game_board.grid_size;
-
-    match cell.cell_state {
-        MSCellState::Mine => {
-            background_color.0 = Color::srgb(1.0, 0.0, 0.0);
-            *game_state = MSGameState::GameOver;
-        },
-        MSCellState::Adjacent(count) => {
-            background_color.0 = Color::WHITE;
-            if count == 0 {
-                let UVec2 { x, y } = cell.pos;
-                for ry in y.saturating_sub(1)..=usize::min(y + 1, grid_size - 1) {
-                    for rx in x.saturating_sub(1)..=usize::min(x + 1, grid_size - 1) {
-                        if ry == y && rx == x { continue }
-                        let neighbor_entity = game_board.cells[ry][rx];
-                        commands.trigger_targets(RevealCell { pos: UVec2::new(rx, ry) }, neighbor_entity);
-                    }
-                }
-            } else {
-                for descendant_entity in children_query.iter_descendants(triggered_entity) {
-                    if let Ok(mut text) = text_query.get_mut(descendant_entity) {
-                        text.sections[0].value = count.to_string();
-                    }
-                }
-            }
-        },
-    }
-
-    commands.trigger(CheckWinCondition);
 }
