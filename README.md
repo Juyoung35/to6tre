@@ -1,3 +1,5 @@
+https://juyoung35.github.io/to6tre/
+
 # A Bevy game template
 
 Template for a Game using the awesome [Bevy engine][bevy] featuring out of the box builds for Windows, Linux, macOS, Web (Wasm), Android, and iOS.
