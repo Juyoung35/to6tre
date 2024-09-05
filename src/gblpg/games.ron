@@ -1,28 +1,26 @@
+#![enable(implicit_some)]
 [
     (
         name: "TentsAndTrees",
-        cells: [
-            (
-                name: "Empty",
+        cells: {
+            "Empty": (
                 default: true,
                 l_click: "Tent",
                 r_click: "Flagged",
                 color: "WHITE",
             ),
-            (
-                name: "Flagged",
+            "Flagged": (
                 l_click: "Tent",
                 r_click: "Empty",
                 color: "GREEN",
             ),
-            (
-                name: "Tree",
+            "Tree": (
                 randarg: 0,
                 color: "GREEN",
                 sprite: "assets/tree.svg",
                 is_valid: "uniq_pair(Tent, 1)",
             ),
-            (
+            "Tent": (
                 name: "Tent",
                 l_click: "Empty",
                 r_click: "Flagged",
@@ -30,11 +28,6 @@
                 sprite: "assets/tent.svg",
                 is_valid: "uniq_pair(Tree, 1) && !adj(Tent, r:square)",
             ),
-            (
-                name: "Clue",
-                template: "horizontal-vertical-count",
-                arg: "Tent.count",
-            )
-        ]
+        }
     )
 ]

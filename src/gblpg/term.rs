@@ -29,10 +29,10 @@ struct ElementStyle {
 enum SpatialElement {
     Cell {
         name: String,
-        rand_args_index: Option<usize>,
-        l_click: Option<ClickAction>,
-        r_click: Option<ClickAction>,
-        style: ElementStyle,
+        // rand_args_index: Option<usize>,
+        // l_click: Option<ClickAction>,
+        // r_click: Option<ClickAction>,
+        // style: ElementStyle,
         // is_valid: Option<Logic>,
     },
     Row,
@@ -49,18 +49,22 @@ enum SpatialElement {
     Center,
 }
 impl SpatialElement {
-    fn from_build(builder: SpatialElementBuilder) -> Self {
+    fn from_build(builder: SpatialElementBuilder, noun_vocab: &Vec<Noun>) -> Self {
         match builder {
             SpatialElementBuilder::Cell {
                 name,
-                rang_args_index,
+                random,
                 l_click,
                 r_click,
                 style,
                 // is_valid,
             } => {
-                
+
+                Self {
+                    name,
+                }
             },
+            _ => panic!(),
         }
     }
 }
