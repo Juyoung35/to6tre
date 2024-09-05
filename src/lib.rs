@@ -5,6 +5,7 @@ mod audio;
 mod loading;
 mod menu;
 mod player;
+mod gblpg;
 
 pub mod games;
 
