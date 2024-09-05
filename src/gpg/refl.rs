@@ -1,25 +1,37 @@
-struct GameElements {
-    spatial_elements: SpatialElements,
+use serde::{Serialize, Deserialize};
+
+struct GameElementsBuilder {
+    spatial_elements_builder: SpatialElementsBuilder,
 }
-struct SpatialElements {
-    cells: HashMap<String, Cell>,
+struct SpatialElementsBuilder {
+    cells: HashMap<String, CellBuilder>,
 }
 // id, resource, hashmap -> id
+
 struct ElementID(usize);
-struct Cell {
-    name: String,
-    is_default: bool,
-    l_click: ElementID,
-    r_click: ElementID,
-    color: Color,
-    sprite: String,
-    is_valid: Logic,
-}
+// struct ElementIDVisitor;
+// impl<'de> Visitor<'de> for I32Visitor {
+//     type Value = ElementID;
+
+//     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//         formatter.write_str("an integer between -2^31 and 2^31")
+//     }
+// }
+// impl<'de> Deserialize<'de> for ElementID {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         deserializer.deserialize_i32(I32Visitor)
+//     }
+// }
+
+
 enum Logic {
     And,
     Or,
     Not,
-    Verb,
+    Verb(),
 }
 
 fn parse_spatial_elements() -> std::io::Result<()> {
@@ -72,4 +84,8 @@ enum SpatialElement {
     Edge,
     // Border -> just is_border, get_border (perimeter of grid)
     // Center -> just is_center, get_center
+}
+
+enum ClickAction {
+    TransformTo(ElementID),
 }
