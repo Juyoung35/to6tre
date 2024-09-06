@@ -5,9 +5,9 @@ mod audio;
 mod loading;
 mod menu;
 mod player;
-mod gblpg;
+pub mod gblpg;
 
-pub mod games;
+// pub mod games;
 
 use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;

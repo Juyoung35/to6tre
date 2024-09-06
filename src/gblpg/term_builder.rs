@@ -1,7 +1,8 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 use ron;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct NounBuilder {
     spatial_elements: Vec<SpatialElementBuilder>,
     // shape_builder,
@@ -9,15 +10,15 @@ struct NounBuilder {
     // game_specific_element_builder,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct VerbBuilder {
     // action_builder,
     // logical_operation_builder,
     // spatial_relation_builder,
 }
 
-#[derive(Deserialize)]
-struct GameBuilder {
+#[derive(Deserialize, Debug)]
+pub struct GameBuilder {
     #[serde(flatten)]
     nouns: NounBuilder,
     #[serde(flatten)]
@@ -26,28 +27,28 @@ struct GameBuilder {
 
 
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct TextStyleBuilder {
     font: String,
     font_size: f32,
     color: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct TextSectionBuilder {
     value: String,
     #[serde(flatten)]
     style: TextStyleBuilder,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct TextBuilder {
     sections: Vec<TextSectionBuilder>,
     justify: String,
     linebreak_behavior: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct ElementStyleBuilder {
     #[serde(flatten)]
     text: TextBuilder,
@@ -58,13 +59,13 @@ struct ElementStyleBuilder {
     h_per: f64,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 enum Random {
     Default,
     Prob(f64),
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 enum SpatialElementBuilder {
     Cell(HashMap<String, CellBuilder>),
     Row,
@@ -81,7 +82,7 @@ enum SpatialElementBuilder {
     Center,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct CellBuilder {
     random: Option<Random>,
     l_click: Option<String>,
