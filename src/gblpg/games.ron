@@ -1,17 +1,18 @@
 #![enable(implicit_some)]
 {
     "TentsAndTrees": (
-        spatial_elements: [
-            "Cell": {
-                "Empty": (
-                ),
-                "Flagged": (
-                ),
-                "Tree": (
-                ),
-                "Tent": (
-                ),
-            },
-        ]
-    )
+        // spatial_elements: [
+        //     "Cell": {
+        //         "Empty": (
+        //         ),
+        //         "Flagged": (
+        //         ),
+        //         "Tree": (
+        //         ),
+        //         "Tent": (
+        //         ),
+        //     },
+        // ]
+        s: "asd",
+    ),
 }

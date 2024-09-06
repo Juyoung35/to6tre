@@ -352,7 +352,7 @@ dependencies = [
  "blake3",
  "fixedbitset 0.5.7",
  "petgraph",
- "ron",
+ "ron 0.8.1",
  "serde",
  "thiserror",
  "thread_local",
@@ -400,7 +400,7 @@ dependencies = [
  "futures-lite",
  "js-sys",
  "parking_lot",
- "ron",
+ "ron 0.8.1",
  "serde",
  "thiserror",
  "uuid",
@@ -614,7 +614,7 @@ dependencies = [
  "image",
  "log",
  "rand",
- "ron",
+ "ron 0.9.0-alpha.0",
  "serde",
  "web-sys",
  "webbrowser",
@@ -3479,6 +3479,19 @@ dependencies = [
  "bitflags 2.5.0",
  "serde",
  "serde_derive",
+]
+
+[[package]]
+name = "ron"
+version = "0.9.0-alpha.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c0bd893640cac34097a74f0c2389ddd54c62d6a3c635fa93cafe6b6bc19be6a"
+dependencies = [
+ "base64 0.21.7",
+ "bitflags 2.5.0",
+ "serde",
+ "serde_derive",
+ "unicode-ident",
 ]
 
 [[package]]

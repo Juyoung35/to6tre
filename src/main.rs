@@ -70,6 +70,6 @@
 use ron;
 use bevy_game::gblpg::parser::parse_spatial_elements;
 fn main() {
-    let path = "gblpg/games.ron";
+    let path = "src/gblpg/games.ron";
     parse_spatial_elements(path);
 }
