@@ -1,33 +1,17 @@
 #![enable(implicit_some)]
-[
-    (
-        name: "TentsAndTrees",
-        cells: {
-            "Empty": (
-                default: true,
-                l_click: "Tent",
-                r_click: "Flagged",
-                color: "WHITE",
-            ),
-            "Flagged": (
-                l_click: "Tent",
-                r_click: "Empty",
-                color: "GREEN",
-            ),
-            "Tree": (
-                randarg: 0,
-                color: "GREEN",
-                sprite: "assets/tree.svg",
-                is_valid: "uniq_pair(Tent, 1)",
-            ),
-            "Tent": (
-                name: "Tent",
-                l_click: "Empty",
-                r_click: "Flagged",
-                color: "GREEN",
-                sprite: "assets/tent.svg",
-                is_valid: "uniq_pair(Tree, 1) && !adj(Tent, r:square)",
-            ),
-        }
+{
+    "TentsAndTrees": (
+        spatial_elements: [
+            "Cell": {
+                "Empty": (
+                ),
+                "Flagged": (
+                ),
+                "Tree": (
+                ),
+                "Tent": (
+                ),
+            },
+        ]
     )
-]
+}

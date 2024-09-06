@@ -66,3 +66,7 @@ fn set_window_icon(
         primary.set_window_icon(Some(icon));
     };
 }
+
+fn main() {
+    
+}
