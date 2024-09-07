@@ -44,14 +44,16 @@ struct TextSectionBuilder {
     style: TextStyleBuilder,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(default)]
 struct TextBuilder {
     sections: Vec<TextSectionBuilder>,
     justify: String,
     linebreak_behavior: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(default)]
 struct ElementStyleBuilder {
     #[serde(flatten)]
     text: TextBuilder,
@@ -62,14 +64,14 @@ struct ElementStyleBuilder {
     h_per: f64,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 enum Random {
+    #[default]
     Default,
     Prob(f64),
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(untagged)]
 enum SpatialElementBuilder {
     Cell(HashMap<String, CellBuilder>),
     Row,
@@ -86,12 +88,13 @@ enum SpatialElementBuilder {
     Center,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(default)]
 struct CellBuilder {
-    random: Option<Random>,
-    l_click: Option<String>,
-    r_click: Option<String>,
-    #[serde(flatten)]
-    style: ElementStyleBuilder,
-    // is_valid: Option<Logic>,
+    // random: Option<Random>,
+    // l_click: Option<String>,
+    // r_click: Option<String>,
+    // #[serde(flatten)]
+    // style: ElementStyleBuilder,
+    // // is_valid: Option<Logic>,
 }

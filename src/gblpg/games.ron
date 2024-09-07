@@ -1,18 +1,20 @@
-// // #![enable(implicit_some)]
-// {
-//     "TentsAndTrees": (
-//         spatial_elements: [
-//             "Cell": {
-//                 "Empty": (
-//                 ),
-//                 "Flagged": (
-//                 ),
-//                 "Tree": (
-//                 ),
-//                 "Tent": (
-//                 ),
-//             },
-//         ],
-//     ),
-// }
-[B(id:0)]
+#![enable(implicit_some)]
+{
+    "TentsAndTrees": (
+        spatial_elements: [
+            (
+                Cell: {
+                    "Empty": (
+                        // color: "GREEN",
+                    ),
+                    "Flagged": (
+                    ),
+                    "Tree": (
+                    ),
+                    "Tent": (
+                    ),
+                },
+            ),
+        ],
+    ),
+}
