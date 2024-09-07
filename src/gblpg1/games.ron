@@ -1,0 +1,32 @@
+{
+    "TentsAndTrees": {
+        "spatial_elements": [
+            Cell({
+                "Empty": (
+                    color: "WHITE",
+                    l_click: "Tent",
+                    r_click: "Flagged",
+                    random: Default,
+                ),
+                "Flagged": (
+                    color: "GREEN",
+                    l_click: "Tent",
+                    r_click: "Empty",
+                ),
+                "Tree": (
+                    color: "GREEN",
+                    random: Prob(0.3),
+                    sprite: "assets/tree.svg",
+                    // is_valid: "uniq_pair(Tent, 1)",
+                ),
+                "Tent": (
+                    color: "GREEN",
+                    l_click: "Empty",
+                    r_click: "Flagged",
+                    sprite: "assets/tent.svg",
+                    // is_valid: "uniq_pair(Tree,/ 1) && !adj(Tent, r:square)",
+                ),
+            }),
+        ],
+    },
+}

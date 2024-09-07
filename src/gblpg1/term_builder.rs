@@ -55,8 +55,18 @@ struct TextStyleBuilder {
     font_size: f32,
     color: String,
 }
+impl Default for TextStyleBuilder {
+    fn default() -> Self {
+        Self {
+            font: "fonts/FiraSans-Bold.ttf",
+            font_size: 32.0,
+            color: "WHITE",
+        }
+    }
+}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(default)]
 struct TextSectionBuilder {
     value: String,
     #[serde(flatten)]

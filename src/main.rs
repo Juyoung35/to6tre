@@ -68,7 +68,7 @@
 // }
 
 use ron;
-use bevy_game::gblpg::parser::parse_spatial_elements;
+use bevy_game::gblpg1::parser::parse_spatial_elements;
 fn main() {
     let path = "src/gblpg/games.ron";
     parse_spatial_elements(path);

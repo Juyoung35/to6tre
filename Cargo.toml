@@ -73,6 +73,7 @@ bevy_reflect = { version = "0.14.1" }
 # ron = "0.8"
 ron = "0.9.0-alpha.0"
 serde = { version = "1", features = ["derive"] }
+serde-inline-default = "0.2.0"
 rand = { version = "0.8.3" }
 webbrowser = { version = "1", features = ["hardened"] }
 web-sys = "0.3.70"

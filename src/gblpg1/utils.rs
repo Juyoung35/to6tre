@@ -154,22 +154,6 @@ fn str_to_css_color(color_str: &str) -> Srgba {
     }
 }
 
-fn str_to_justify_text(just_str: &str) -> JustifyText {
-    match just_str {
-        "Left" => JustifyText::Left,
-        "Right" => JustifyText::Right,
-        "Center" | _ => JustifyText::Center,
-    }
-}
-
-fn str_to_breakline_on(break_str: &str) -> BreaklineOn {
-    match break_str {
-        "AnyCharacter" => BreaklineOn::AnyCharacter,
-        "NoWrap" => BreaklineOn::NoWrap,
-        "WordBoundary" | _ => BreaklineOn::WordBoundary,
-    }
-}
-
 fn spawn_header(builder: &mut ChildBuilder, font: &Font, game_title: &str) {
     // Header
     builder
