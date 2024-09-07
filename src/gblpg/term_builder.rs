@@ -10,7 +10,7 @@ fn read_ron(contents: &mut String, file_path: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn parse_games(file_path: &str) -> std::io::Result<HashMap<String, GameBuilder>> {
+pub(super) fn parse_games(file_path: &str) -> std::io::Result<HashMap<String, GameBuilder>> {
     // Setup the options
     let options = Options::default()
         .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
@@ -42,7 +42,7 @@ struct VerbBuilder {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
-pub struct GameBuilder {
+pub(super) struct GameBuilder {
     #[serde(flatten)]
     nouns: NounBuilder,
     #[serde(flatten)]
@@ -91,7 +91,7 @@ enum Random {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum SpatialElementBuilder {
+pub(super) enum SpatialElementBuilder {
     Cell(HashMap<String, CellBuilder>),
     Row,
     Column,
@@ -109,7 +109,7 @@ pub enum SpatialElementBuilder {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
-struct CellBuilder {
+pub(super) struct CellBuilder {
     random: Option<Random>,
     l_click: Option<String>,
     r_click: Option<String>,
@@ -118,7 +118,7 @@ struct CellBuilder {
     // is_valid: Option<Logic>,
 }
 
-// pub fn test() {
+// pub(super) fn test() {
 //     let options = Options::default()
 //         .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
 //         .with_default_extension(Extensions::IMPLICIT_SOME);

@@ -6,6 +6,7 @@ pub mod term_builder;
 use bevy::prelude::*;
 use rand::{Rng, rngs::ThreadRng};
 
+use term::Noun;
 use term_builder::parse_games;
 use utils::*;
 
@@ -58,17 +59,56 @@ impl Game {
 }
 
 fn build_game() {
-    let games = parse_games(RON_FILE_PATH);
-    for (name, game) in games.iter() {
-        let GameBuilder { nouns, verbs } = game;
-        for spatial_element in nouns.spatial_elements {
+    let games_ron = parse_games(RON_FILE_PATH);
+    let mut games = Vec::new();
+    for (game_name, game) in games_ron.iter() {
+        let GameBuilder { nouns: nouns_ron, verbs_ron } = game;
+        let mut rng = thread_rng();
+        let mut nouns = Vec::new();
+        let mut noun_id = 0;
+        let mut rand_args = vec![(0, 1.0)];
+        for spatial_element in nouns_ron.spatial_elements {
             match spatial_element {
                 SpatialElementBuilder::Cell(map) => {
-
+                    for (name, cell_builder) in map.iter() {
+                        let CellBuilder {
+                            random_ron,
+                            l_click_ron,
+                            r_click_ron,
+                            style_ron,
+                            // is_valid: Option<Logic>,
+                        } = cell_builder;
+                        if let Some(random) = random_ron {
+                            match random {
+                                Random::Default => {
+                                    rand_args[0] = (noun_id, 1.0);
+                                },
+                                Random::Prob(prob) => {
+                                    rand_args.push(noun_id, prob);
+                                },
+                            }
+                        }
+                        nouns.push(
+                            Noun::SpatialElement(
+                                SpatialElement::Cell {
+                                    name: name.as_str(),
+                                    rand_args_index,
+                                    l_click,
+                                    r_click,
+                                    style,
+                                }
+                            )
+                        );
+                    }
                 },
                 _ => (),
             }
+            noun_id += 1;
         }
+        games.push(Game {
+            name: game_name,
+
+        })
     }
 }
 

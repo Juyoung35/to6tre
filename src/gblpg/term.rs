@@ -1,23 +1,23 @@
 use super::term::*;
 
-enum Noun {
+pub(super) enum Noun {
     SpatialElement(SpatialElement),
     Shape(Shape),
     Pattern(Pattern),
     GameSpecificElement(GameSpecificElement),
 }
 
-enum Verb {
+pub(super) enum Verb {
     Action(Action),
     LogicalOperation(LogicalOperation),
     SpatialRelation(SpatialRelation),
 }
 
-enum ClickAction {
+pub(super) enum ClickAction {
     TransformTo(Noun),
 }
 
-struct ElementStyle {
+pub(super) struct ElementStyle {
     text: Text, // Bevy Text
     color: Color,
     background_color: Color,
@@ -26,13 +26,13 @@ struct ElementStyle {
     height_percent: f64,
 }
 
-enum SpatialElement {
+pub(super) enum SpatialElement {
     Cell {
-        name: String,
-        // rand_args_index: Option<usize>,
-        // l_click: Option<ClickAction>,
-        // r_click: Option<ClickAction>,
-        // style: ElementStyle,
+        name: &str,
+        rand_args_index: Option<usize>,
+        l_click: Option<ClickAction>,
+        r_click: Option<ClickAction>,
+        style: ElementStyle,
         // is_valid: Option<Logic>,
     },
     Row,
@@ -69,7 +69,7 @@ impl SpatialElement {
     }
 }
 
-enum Shape {
+pub(super) enum Shape {
     Line,
     Square,
     Rectangle,
@@ -80,12 +80,12 @@ enum Shape {
     Arrow,
 }
 
-enum Pattern {
+pub(super) enum Pattern {
     Tetromino,
     Pentomino,
 }
 
-enum GameSpecificElement {
+pub(super) enum GameSpecificElement {
     Clue,
     Hint,
     Number,
@@ -94,7 +94,7 @@ enum GameSpecificElement {
     Shade,
 }
 
-enum Action {
+pub(super) enum Action {
     Place,
     Remove,
     Swap,
@@ -107,7 +107,7 @@ enum Action {
     Divide,
 }
 
-enum LogicalOperation {
+pub(super)enum LogicalOperation {
     Include,
     Exclude,
     Negate,
@@ -116,7 +116,7 @@ enum LogicalOperation {
     Union,
 }
 
-enum SpatialRelation {
+pub(super) enum SpatialRelation {
     Touch,
     Overlap,
     Surround,
