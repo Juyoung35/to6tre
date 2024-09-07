@@ -1,22 +1,17 @@
-// #![enable(implicit_some)]
-// {
-//     "TentsAndTrees": Test (
-//         // spatial_elements: [
-//         //     "Cell": {
-//         //         "Empty": (
-//         //         ),
-//         //         "Flagged": (
-//         //         ),
-//         //         "Tree": (
-//         //         ),
-//         //         "Tent": (
-//         //         ),
-//         //     },
-//         // ]
-//         s: "asd",
-//     ),
-// }
-#![enable(explicit_struct_names)]
-(
-    s: "asd",
-)
+#![enable(implicit_some)]
+{
+    "TentsAndTrees": (
+        spatial_elements: [
+            "Cell": {
+                "Empty": (
+                ),
+                "Flagged": (
+                ),
+                "Tree": (
+                ),
+                "Tent": (
+                ),
+            },
+        ]
+    ),
+}

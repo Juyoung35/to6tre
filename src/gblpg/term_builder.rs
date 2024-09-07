@@ -2,7 +2,8 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use ron;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(default)]
 struct NounBuilder {
     spatial_elements: Vec<SpatialElementBuilder>,
     // shape_builder,
@@ -10,14 +11,16 @@ struct NounBuilder {
     // game_specific_element_builder,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(default)]
 struct VerbBuilder {
     // action_builder,
     // logical_operation_builder,
     // spatial_relation_builder,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
+#[serde(default)]
 pub struct GameBuilder {
     #[serde(flatten)]
     nouns: NounBuilder,
@@ -66,6 +69,7 @@ enum Random {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(untagged)]
 enum SpatialElementBuilder {
     Cell(HashMap<String, CellBuilder>),
     Row,

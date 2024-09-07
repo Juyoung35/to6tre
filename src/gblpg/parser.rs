@@ -21,18 +21,10 @@ pub fn parse_spatial_elements(file_path: &str) -> std::io::Result<()> {
 
     let mut contents = String::new();
     read_ron(&mut contents, file_path);
-    // let games: HashMap<String, GameBuilder> = ron::from_str(&mut contents).unwrap();
-    // let games: HashMap<String, GameBuilder> = options.from_str(&mut contents).unwrap();
-    // let games: HashMap<String, Test> = options.from_str(&mut contents).unwrap();
-    let games: Test = options.from_str(&mut contents).unwrap();
+    let games: HashMap<String, GameBuilder> = options.from_str(&mut contents).unwrap();
     println!("{games:?}");
     // for (game_name, game_elements) in games {
     //     println!("{game_name:?}\n{game_elements:?}");
     // }
     Ok(())
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct Test {
-    s: String,
 }
