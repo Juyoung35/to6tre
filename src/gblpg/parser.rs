@@ -17,14 +17,25 @@ fn read_ron(contents: &mut String, file_path: &str) -> std::io::Result<()> {
 
 pub fn parse_spatial_elements(file_path: &str) -> std::io::Result<()> {
     // Setup the options
-    let options = Options::default().without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES);
+    // let options = Options::default().without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES);
+    let options = Options::default()
+        .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
+        .with_default_extension(Extensions::IMPLICIT_SOME);
 
     let mut contents = String::new();
     read_ron(&mut contents, file_path);
-    let games: HashMap<String, GameBuilder> = options.from_str(&mut contents).unwrap();
+    // let games: HashMap<String, GameBuilder> = options.from_str(&mut contents).unwrap();
+    let games: Vec<Test> = options.from_str(&mut contents).unwrap();
     println!("{games:?}");
     // for (game_name, game_elements) in games {
     //     println!("{game_name:?}\n{game_elements:?}");
     // }
     Ok(())
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+enum Test {
+    A(usize),
+    B { id: usize },
 }
