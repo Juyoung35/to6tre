@@ -1,7 +1,7 @@
 // mod utils;
 pub mod parser;
 // mod term;
-mod term_builder;
+pub mod term_builder;
 
 // use bevy::prelude::*;
 // use rand::{Rng, rngs::ThreadRng};

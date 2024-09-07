@@ -1,8 +1,9 @@
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-use ron;
+// use ron;
+use ron::{self, extensions::Extensions, options::Options};
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
 struct NounBuilder {
     spatial_elements: Vec<SpatialElementBuilder>,
@@ -11,7 +12,7 @@ struct NounBuilder {
     // game_specific_element_builder,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
 struct VerbBuilder {
     // action_builder,
@@ -19,7 +20,7 @@ struct VerbBuilder {
     // spatial_relation_builder,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
 pub struct GameBuilder {
     #[serde(flatten)]
@@ -28,23 +29,21 @@ pub struct GameBuilder {
     verbs: VerbBuilder,
 }
 
-
-
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct TextStyleBuilder {
     font: String,
     font_size: f32,
     color: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct TextSectionBuilder {
     value: String,
     #[serde(flatten)]
     style: TextStyleBuilder,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
 struct TextBuilder {
     sections: Vec<TextSectionBuilder>,
@@ -52,7 +51,7 @@ struct TextBuilder {
     linebreak_behavior: String,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
 struct ElementStyleBuilder {
     #[serde(flatten)]
@@ -64,14 +63,14 @@ struct ElementStyleBuilder {
     h_per: f64,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 enum Random {
     #[default]
     Default,
     Prob(f64),
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 enum SpatialElementBuilder {
     Cell(HashMap<String, CellBuilder>),
     Row,
@@ -88,13 +87,37 @@ enum SpatialElementBuilder {
     Center,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
 struct CellBuilder {
-    // random: Option<Random>,
-    // l_click: Option<String>,
-    // r_click: Option<String>,
-    // #[serde(flatten)]
-    // style: ElementStyleBuilder,
-    // // is_valid: Option<Logic>,
+    random: Option<Random>,
+    l_click: Option<String>,
+    r_click: Option<String>,
+    #[serde(flatten)]
+    style: ElementStyleBuilder,
+    // is_valid: Option<Logic>,
 }
+
+// pub fn test() {
+//     let options = Options::default()
+//         .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
+//         .with_default_extension(Extensions::IMPLICIT_SOME);
+//     let mut map = HashMap::new();
+//     map.insert("TreeGame".to_string(), GameBuilder {
+//         nouns: NounBuilder {
+//             spatial_elements: vec![
+//                 SpatialElementBuilder::Cell({
+//                     let mut m = HashMap::new();
+//                     m.insert("Empty".to_string(), CellBuilder {
+
+//                     });
+//                     m
+//                 })
+//             ],
+//         },
+//         ..Default::default()
+//     });
+
+//     let s = options.to_string(&map).unwrap();
+//     println!("{s:?}");
+// }

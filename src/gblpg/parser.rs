@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use ron::{self, extensions::Extensions, options::Options};
 
-use super::term_builder::GameBuilder;
+use super::term_builder::*;
 
 fn read_ron(contents: &mut String, file_path: &str) -> std::io::Result<()> {
     // let file = File::open("games.ron")?;
