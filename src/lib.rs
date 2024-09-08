@@ -7,7 +7,7 @@ mod menu;
 mod player;
 pub mod gblpg1;
 pub mod gblpg;
-
+pub mod phind;
 // pub mod games;
 
 use crate::actions::ActionsPlugin;
