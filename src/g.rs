@@ -12,36 +12,85 @@ struct Cell {
     model: usize,
 }
 
-struct CellModel {
-    id: usize,
-    name: String,
-    // actions,
-    node_bundle: NodeBundle,
-    text: Option<Text>,
+// struct CellModel {
+//     id: usize,
+//     name: String,
+//     class: Noun,
+//     // actions,
+//     node_bundle: NodeBundle,
+//     text: Option<Text>,
+// }
+
+enum Noun {
+    SpatialElement(SptialElement),
+}
+enum SpatialElement {
+    Cell {
+        id: usize,
+        name: String,
+        node_bundle: NodeBundle,
+        text: Option<Text>,
+    },
+}
+trait Builder {
+    fn to_noun(self, asset_server: Res<AssetServer>) -> Noun;
 }
 
-// trait Builder {
-//     type Model;
-//     fn to_model() -> Self::Model;
-// }
+struct GameConfig {
+    name: String,
+    nouns: Nouns,
+}
+
+struct Nouns {
+    nouns: Vec<Noun>,
+    noun_map: HashMap<String, usize>,
+}
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct GameConfigBuilder {
     name: String,
-    nouns: NounBuilder,
+    noun_builder: NounBuilder,
+}
+impl GameConfigBuilder {
+    fn to_game_config(self, asset_server: Res<AssetServer>) -> GameConfig {
+        let Self { name, noun_builder } = self;
+        GameConfig {
+            name,
+            nouns: noun_builder.to_nouns(asset_server),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct NounBuilder {
-    spatial_elements: SpatialElementBuilder,
+    spatial_element_builder: SpatialElementBuilder,
+}
+impl NounBuilder {
+    fn to_nouns(self, asset_server: Res<AssetServer>) -> Nouns {
+        let mut nouns = Vec::new();
+        let mut noun_map = HashMap::new();
+        let Self { spatial_element_builder } = self;
+        let SpatialElementBuilder { cells } = spatial_element_builder;
+        for cell in cells {
+            noun_map.insert(cell.name, nouns.len());
+            nouns.push(cell.to_noun(asset_server));
+        }
+        Nouns {
+            nouns,
+            noun_map,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct SpatialElementBuilder {
     cells: Vec<CellBuilder>,
 }
-impl SpatialElementBuilder {
 
+enum GenMethod {
+    Default,
+    Random(f64),
+    DepOn,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -50,19 +99,23 @@ struct CellBuilder {
     name: String,
     // l_click: Option<Action>,
     // r_click: Option<Action>,
+    gen: GenMethod,
+    locked: bool,
     #[serde(flatten)]
     node: NodeBundleBuilder,
     text: Option<TextBuilder>,
 }
-impl CellBuilder {
-    fn to_cell_model(self, asset_server: Res<AssetServer>) -> CellModel {
+impl Builder for CellBuilder {
+    fn to_noun(self, asset_server: AssetServer) -> Noun {
         let Self { name, node, text: text_ops } = self;
-        CellModel {
-            id: 0,
-            name,
-            node_bundle: node.to_node_bundle(),
-            text: if let Some(text) = text_ops { Some(text.to_text(asset_server)) } else { None },
-        }
+        Noun::SpatialElement(
+            SpatialElement::Cell {
+                id: 0,
+                name,
+                node_bundle: node.to_node_bundle(),
+                text: if let Some(text) = text_ops { Some(text.to_text(asset_server)) } else { None },
+            }
+        )
     }
 }
 
@@ -99,7 +152,7 @@ struct TextBuilder {
     linebreak_behavior: BreakLineOn,
 }
 impl TextBuilder {
-    fn to_text(self, asset_server: Res<AssetServer>) -> Text {
+    fn to_text(self, asset_server: AssetServer) -> Text {
         let Self { section_builders, justify, linebreak_behavior } = self;
         let mut sections = Vec::new();
         for section_builder in section_builders {
@@ -334,6 +387,13 @@ pub fn rr() {
     let ss = options.to_string_pretty(&r3, PrettyConfig::default()).unwrap();
     println!("{ss}");
 
+    let mut game_configs = Vec::new();
+    let game_config_builders: Vec<GameConfigBuilder> = options.from_str(r).unwrap();
+    for game_config_builder in game_config_builders {
+        let game_config = game_config_builder.to_game_config(asset_server);
+        game_configs.push(game_config);
+    }
+
     let s = r#"
     [
         {
@@ -368,10 +428,21 @@ pub fn rr() {
 //         spatial_elements: (
 //             cells: [
 //                 {
+//                     "name": "Empty",
+//                     "background_color": "WHITE",
+//                 },
+//                 {
+//                     "name": "Flagged",
+//                     "background_color": "GREEN",
+//                 },
+//                 {
 //                     "name": "Tree",
-//                     "style": (
-//                     )
-//                 }
+//                     "background_color": "GREEN",
+//                 },
+//                 {
+//                     "name": "Tent",
+//                     "background_color": "GREEN",
+//                 },
 //             ]
 //         )
 //     )
