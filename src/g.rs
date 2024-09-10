@@ -64,7 +64,7 @@ impl CellModel {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(default)]
 struct CellBuilder {
     name: String,
@@ -76,19 +76,19 @@ struct CellBuilder {
 }
 
 #[serde_inline_default]
-#[derive(Serialize, Deserialize, Default)]
-#[serde(default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 struct NodeBundleBuilder {
-    #[serde(flatten)]
+    #[serde(default)]
     style: Style,
     #[serde_inline_default("WHITE".to_string())]
     background_color: String,
     #[serde_inline_default("BLACK".to_string())]
     border_color: String,
+    #[serde(default)]
     border_radius: BorderRadius,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(default)]
 struct TextBuilder {
     section_builders: Vec<TextSectionBuilder>,
@@ -96,7 +96,7 @@ struct TextBuilder {
     linebreak_behavior: BreakLineOn,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(default)]
 struct TextSectionBuilder {
     value: String,
@@ -104,7 +104,7 @@ struct TextSectionBuilder {
 }
 
 #[serde_inline_default]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 struct TextStyleBuilder {
     #[serde_inline_default("fonts/FiraSans-Bold.ttf".to_string())]
     font: String,
@@ -112,6 +112,15 @@ struct TextStyleBuilder {
     font_size: f32,
     #[serde_inline_default("BLACK".to_string())]
     color: String,
+}
+impl TextStyleBuilder {
+    fn to_text_style(self, asset_server: Res<AssetServer>) -> TextStyle {
+        TextStyle {
+            font: asset_server.load(font),
+            font_size,
+            color: Color::Srgba(str_to_css_color(&color)),
+        };
+    }
 }
 
 fn str_to_css_color(color_str: &str) -> Srgba {
@@ -287,6 +296,32 @@ pub fn rr() {
         .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
         .with_default_extension(Extensions::IMPLICIT_SOME);
 
-    let ss = options.to_string_pretty(&r, PrettyConfig::default()).unwrap();
+    let ss = options.to_string_pretty(&vec![r], PrettyConfig::default()).unwrap();
     println!("{ss}");
+
+    let s = r#"
+    [
+        {
+            "name: "Empty",
+            "background_color": "WHITE",
+        },
+        {
+            "name": "Flagged",
+            "background_color": "GREEN",
+        },
+        {
+            "name": "Tree",
+            "background_color": "GREEN",
+        },
+        {
+            "name": "Tent",
+            "background_color": "GREEN",
+        },
+    ]
+    "#;
+
+    let out: Vec<CellBuilder> = options.from_str(s).unwrap();
+    println!("{out:?}");
 }
+
+// https://github.com/ron-rs/ron/issues/115
