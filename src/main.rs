@@ -76,5 +76,7 @@
 
 use bevy_game::g::*;
 fn main() {
-    rr();
+    App::new()
+        .add_systems(Startup, rr)
+        .run();
 }

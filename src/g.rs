@@ -4,6 +4,8 @@ use serde::{Serialize, Deserialize};
 use ron::{self, ser::PrettyConfig, extensions::Extensions, options::Options};
 use bevy::text::BreakLineOn;
 use serde_inline_default::serde_inline_default;
+use std::cmp::Ordering;
+use std::collections::HashMap;
 
 #[derive(Component)]
 struct Cell {
@@ -22,7 +24,7 @@ struct Cell {
 // }
 
 enum Noun {
-    SpatialElement(SptialElement),
+    SpatialElement(SpatialElement),
 }
 enum SpatialElement {
     Cell {
@@ -34,9 +36,9 @@ enum SpatialElement {
         text: Option<Text>,
     },
 }
-trait Builder {
-    fn to_noun(self, asset_server: Res<AssetServer>) -> Noun;
-}
+// trait Builder {
+//     fn to_noun(self, asset_server: Res<AssetServer>) -> Noun;
+// }
 
 struct GameConfig {
     name: String,
@@ -46,6 +48,7 @@ struct GameConfig {
 struct Nouns {
     nouns: Vec<Noun>,
     noun_map: HashMap<String, usize>,
+    gen_config: GenConfig,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -54,7 +57,7 @@ struct GameConfigBuilder {
     noun_builder: NounBuilder,
 }
 impl GameConfigBuilder {
-    fn to_game_config(self, asset_server: Res<AssetServer>) -> GameConfig {
+    fn to_game_config(self, asset_server: AssetServer) -> GameConfig {
         let Self { name, noun_builder } = self;
         GameConfig {
             name,
@@ -68,28 +71,46 @@ struct NounBuilder {
     spatial_element_builder: SpatialElementBuilder,
 }
 impl NounBuilder {
-    fn to_nouns(self, asset_server: Res<AssetServer>) -> Nouns {
+    fn to_nouns(self, asset_server: AssetServer) -> Nouns {
         let mut nouns = Vec::new();
         let Self { spatial_element_builder } = self;
         let SpatialElementBuilder { cells } = spatial_element_builder;
-        let mut noun_count = 0;
+        let mut noun_id = 0;
         let mut noun_map = HashMap::new();
-        let mut 
+        let mut gen_config = GenConfig::default();
         for cell in cells.iter() {
-            match cell.gen {
+            match cell.gen_method {
                 GenMethodBuilder::None => (),
-                GenMethodBuilder::Default => (),
-                GenMethodBuilder::Random(prob) => {},
+                GenMethodBuilder::Default => gen_config.default = noun_id,
+                GenMethodBuilder::Random(mut prob) => {
+                    if let Some((last_prob, _)) = gen_config.probs.last() {
+                        prob += last_prob;
+                    }
+                    gen_config.probs.push((prob, noun_id));
+                },
             }
-            noun_map.insert(cell.name, noun_count);
-            noun_count += 1;
+            noun_map.insert(cell.name.clone(), noun_id);
+            noun_id += 1;
+        }
+        let (last_prob, is_greater) = if let Some((last_prob, _)) = gen_config.probs.last() {
+            
+            match f64::partial_cmp(last_prob, &1.0) {
+                Some(Ordering::Greater) => (*last_prob, true),
+                _ => (*last_prob, false),
+            }
+        } else { (0.0, false) };
+        if is_greater {
+            for (prob, _) in gen_config.probs.iter_mut() {
+                *prob /= last_prob;
+            }
         }
         for cell in cells {
-            nouns.push(cell.to_noun(asset_server, &noun_map));
+            nouns.push(cell.to_noun(asset_server.clone(), &noun_map));
         }
         Nouns {
             nouns,
             noun_map,
+            gen_config,
         }
     }
 }
@@ -107,6 +128,12 @@ enum GenMethod {
     // DependOn,
 }
 
+#[derive(Default, Debug)]
+struct GenConfig {
+    default: usize,
+    probs: Vec<(f64, usize)>,
+}
+
 #[derive(Serialize, Deserialize, Default, Debug)]
 enum GenMethodBuilder {
     #[default]
@@ -115,11 +142,11 @@ enum GenMethodBuilder {
     Random(f64),
     // DependOn(String),
 }
-impl GenMethodBuilder {
-    fn to_gen_method(self, noun_map: &HashMap<String, usize>, rng_vec: &mut Vec<usize>) -> GenMethod {
+// impl GenMethodBuilder {
+//     fn to_gen_method(self, noun_map: &HashMap<String, usize>, rng_vec: &mut Vec<usize>) -> GenMethod {
 
-    }
-}
+//     }
+// }
 
 #[derive(Clone, Copy, Debug)]
 enum Action {
@@ -138,27 +165,28 @@ struct CellBuilder {
     l_click: Option<ActionBuilder>,
     r_click: Option<ActionBuilder>,
     // valid: 
-    gen: GenMethodBuilder,
+    gen_method: GenMethodBuilder,
     #[serde(flatten)]
     node: NodeBundleBuilder,
     text: Option<TextBuilder>,
 }
-impl Builder for CellBuilder {
+// impl Builder for CellBuilder {
+impl CellBuilder {
     fn to_noun(self, asset_server: AssetServer, noun_map: &HashMap<String, usize>) -> Noun {
-        let Self { name, l_click, r_click, node, text: text_ops } = self;
+        let Self { name, l_click, r_click, node, text: text_ops, .. } = self;
         Noun::SpatialElement(
             SpatialElement::Cell {
-                id: noun_map.get(name).unwrap(),
+                id: *noun_map.get(&name).unwrap(),
                 name,
                 l_click: match l_click {
                     Some(ActionBuilder::TransformTo(next)) => {
-                        Some(Action::TransformTo(noun_map.get(next).unwrap()))
+                        Some(Action::TransformTo(*noun_map.get(&next).unwrap()))
                     },
                     _ => None,
                 },
                 r_click: match r_click {
                     Some(ActionBuilder::TransformTo(next)) => {
-                        Some(Action::TransformTo(noun_map.get(next).unwrap()))
+                        Some(Action::TransformTo(*noun_map.get(&next).unwrap()))
                     },
                     _ => None,
                 },
@@ -406,7 +434,7 @@ fn str_to_css_color(color_str: &str) -> Srgba {
     }
 }
 
-pub fn rr() {
+pub fn rr(asset_server: Res<AssetServer>) {
     let r = CellBuilder {
         name: "Tree".to_string(),
         node: NodeBundleBuilder {
@@ -420,7 +448,9 @@ pub fn rr() {
             },
             ..default()
         },
+        gen_method: GenMethodBuilder::Random(0.3),
         text: None,
+        ..default()
     };
     // let r3 = GameConfigBuilder {
     //     name: "tents and trees".to_string(),
@@ -434,67 +464,49 @@ pub fn rr() {
         .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
         .with_default_extension(Extensions::IMPLICIT_SOME);
 
-    let ss = options.to_string_pretty(&r3, PrettyConfig::default()).unwrap();
-    println!("{ss}");
+    // let ss = options.to_string_pretty(&r3, PrettyConfig::default()).unwrap();
+    // println!("{ss}");
+
+    let ronfig = r#"
+[
+    (
+        name: "tents and trees",
+        nouns: (
+            spatial_elements: (
+                cells: [
+                    {
+                        "name": "Empty",
+                        "gen_method": "default",
+                        "background_color": "WHITE",
+                    },
+                    {
+                        "name": "Flagged",
+                        "background_color": "GREEN",
+                    },
+                    {
+                        "name": "Tree",
+                        "gen_method": Random(0.3),
+                        "background_color": "GREEN",
+                    },
+                    {
+                        "name": "Tent",
+                        "background_color": "GREEN",
+                    },
+                ]
+            )
+        )
+    )
+]
+"#;
 
     let mut game_configs = Vec::new();
-    let game_config_builders: Vec<GameConfigBuilder> = options.from_str(r).unwrap();
+    let game_config_builders: Vec<GameConfigBuilder> = options.from_str(ronfig).unwrap();
     for game_config_builder in game_config_builders {
-        let game_config = game_config_builder.to_game_config(asset_server);
+        let game_config = game_config_builder.to_game_config(asset_server.clone());
         game_configs.push(game_config);
     }
-
-    let s = r#"
-    [
-        {
-            "name": "Empty",
-            "background_color": "WHITE",
-        },
-        {
-            "name": "Flagged",
-            "background_color": "GREEN",
-        },
-        {
-            "name": "Tree",
-            "background_color": "GREEN",
-        },
-        {
-            "name": "Tent",
-            "background_color": "GREEN",
-        },
-    ]
-    "#;
-
-    let out: Vec<CellBuilder> = options.from_str(s).unwrap();
+    let out: Vec<GameConfigBuilder> = options.from_str(ronfig).unwrap();
     println!("{out:?}");
 }
 
 // https://github.com/ron-rs/ron/issues/115
-
-// r#"
-// (
-//     name: "tents and trees",
-//     nouns: (
-//         spatial_elements: (
-//             cells: [
-//                 {
-//                     "name": "Empty",
-//                     "background_color": "WHITE",
-//                 },
-//                 {
-//                     "name": "Flagged",
-//                     "background_color": "GREEN",
-//                 },
-//                 {
-//                     "name": "Tree",
-//                     "background_color": "GREEN",
-//                 },
-//                 {
-//                     "name": "Tent",
-//                     "background_color": "GREEN",
-//                 },
-//             ]
-//         )
-//     )
-// )
-// "#;
