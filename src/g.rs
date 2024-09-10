@@ -28,6 +28,8 @@ enum SpatialElement {
     Cell {
         id: usize,
         name: String,
+        l_click: Option<Action>,
+        r_click: Option<Action>,
         node_bundle: NodeBundle,
         text: Option<Text>,
     },
@@ -68,12 +70,22 @@ struct NounBuilder {
 impl NounBuilder {
     fn to_nouns(self, asset_server: Res<AssetServer>) -> Nouns {
         let mut nouns = Vec::new();
-        let mut noun_map = HashMap::new();
         let Self { spatial_element_builder } = self;
         let SpatialElementBuilder { cells } = spatial_element_builder;
+        let mut noun_count = 0;
+        let mut noun_map = HashMap::new();
+        let mut 
+        for cell in cells.iter() {
+            match cell.gen {
+                GenMethodBuilder::None => (),
+                GenMethodBuilder::Default => (),
+                GenMethodBuilder::Random(prob) => {},
+            }
+            noun_map.insert(cell.name, noun_count);
+            noun_count += 1;
+        }
         for cell in cells {
-            noun_map.insert(cell.name, nouns.len());
-            nouns.push(cell.to_noun(asset_server));
+            nouns.push(cell.to_noun(asset_server, &noun_map));
         }
         Nouns {
             nouns,
@@ -87,31 +99,69 @@ struct SpatialElementBuilder {
     cells: Vec<CellBuilder>,
 }
 
+#[derive(Clone, Debug)]
 enum GenMethod {
+    None,
     Default,
     Random(f64),
-    DepOn,
+    // DependOn,
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+enum GenMethodBuilder {
+    #[default]
+    None,
+    Default,
+    Random(f64),
+    // DependOn(String),
+}
+impl GenMethodBuilder {
+    fn to_gen_method(self, noun_map: &HashMap<String, usize>, rng_vec: &mut Vec<usize>) -> GenMethod {
+
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Action {
+    TransformTo(usize),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+enum ActionBuilder {
+    TransformTo(String),
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(default)]
 struct CellBuilder {
     name: String,
-    // l_click: Option<Action>,
-    // r_click: Option<Action>,
-    gen: GenMethod,
-    locked: bool,
+    l_click: Option<ActionBuilder>,
+    r_click: Option<ActionBuilder>,
+    // valid: 
+    gen: GenMethodBuilder,
     #[serde(flatten)]
     node: NodeBundleBuilder,
     text: Option<TextBuilder>,
 }
 impl Builder for CellBuilder {
-    fn to_noun(self, asset_server: AssetServer) -> Noun {
-        let Self { name, node, text: text_ops } = self;
+    fn to_noun(self, asset_server: AssetServer, noun_map: &HashMap<String, usize>) -> Noun {
+        let Self { name, l_click, r_click, node, text: text_ops } = self;
         Noun::SpatialElement(
             SpatialElement::Cell {
-                id: 0,
+                id: noun_map.get(name).unwrap(),
                 name,
+                l_click: match l_click {
+                    Some(ActionBuilder::TransformTo(next)) => {
+                        Some(Action::TransformTo(noun_map.get(next).unwrap()))
+                    },
+                    _ => None,
+                },
+                r_click: match r_click {
+                    Some(ActionBuilder::TransformTo(next)) => {
+                        Some(Action::TransformTo(noun_map.get(next).unwrap()))
+                    },
+                    _ => None,
+                },
                 node_bundle: node.to_node_bundle(),
                 text: if let Some(text) = text_ops { Some(text.to_text(asset_server)) } else { None },
             }
@@ -372,14 +422,14 @@ pub fn rr() {
         },
         text: None,
     };
-    let r3 = GameConfigBuilder {
-        name: "tents and trees".to_string(),
-        nouns: NounBuilder {
-            spatial_elements: SpatialElementBuilder {
-                cells: vec![r],
-            }
-        },
-    };
+    // let r3 = GameConfigBuilder {
+    //     name: "tents and trees".to_string(),
+    //     nouns: NounBuilder {
+    //         spatial_elements: SpatialElementBuilder {
+    //             cells: vec![r],
+    //         }
+    //     },
+    // };
     let options = Options::default()
         .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
         .with_default_extension(Extensions::IMPLICIT_SOME);
