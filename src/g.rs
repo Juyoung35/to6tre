@@ -19,49 +19,29 @@ struct CellModel {
     node_bundle: NodeBundle,
     text: Option<Text>,
 }
-impl CellModel {
-    fn from_cell_builder(
-        asset_server: Res<AssetServer>,
-        cell_builder: CellBuilder,
-    ) -> Self {
-        let CellBuilder { name, node_builder, text_builder } = cell_builder;
-        let NodeBundleBuilder { style, background_color, border_color, border_radius } = node_builder;
-        let text = if let Some(TextBuilder { section_builders, justify, linebreak_behavior }) = text_builder {
-            let mut sections = Vec::new();
-            for section_builder in section_builders {
-                let TextSectionBuilder { value, style_builder } = section_builder;
-                let TextStyleBuilder { font, font_size, color } = style_builder;
-                let style = TextStyle {
-                    font: asset_server.load(font),
-                    font_size,
-                    color: Color::Srgba(str_to_css_color(&color)),
-                };
-                sections.push(TextSection {
-                    value,
-                    style,
-                });
-            }
-            Some(Text {
-                sections,
-                justify,
-                linebreak_behavior,
-            })
-        } else { None };
-        let node_bundle: NodeBundle = NodeBundle {
-            style,
-            background_color: BackgroundColor(Color::Srgba(str_to_css_color(&background_color))),
-            border_color: BorderColor(Color::Srgba(str_to_css_color(&border_color))),
-            border_radius,
-            ..default()
-        };
-        let id = 0;
-        Self {
-            id,
-            name,
-            node_bundle,
-            text,
-        }
-    }
+
+// trait Builder {
+//     type Model;
+//     fn to_model() -> Self::Model;
+// }
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+struct GameConfigBuilder {
+    name: String,
+    nouns: NounBuilder,
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+struct NounBuilder {
+    spatial_elements: SpatialElementBuilder,
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+struct SpatialElementBuilder {
+    cells: Vec<CellBuilder>,
+}
+impl SpatialElementBuilder {
+
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -71,8 +51,19 @@ struct CellBuilder {
     // l_click: Option<Action>,
     // r_click: Option<Action>,
     #[serde(flatten)]
-    node_builder: NodeBundleBuilder,
-    text_builder: Option<TextBuilder>,
+    node: NodeBundleBuilder,
+    text: Option<TextBuilder>,
+}
+impl CellBuilder {
+    fn to_cell_model(self, asset_server: Res<AssetServer>) -> CellModel {
+        let Self { name, node, text: text_ops } = self;
+        CellModel {
+            id: 0,
+            name,
+            node_bundle: node.to_node_bundle(),
+            text: if let Some(text) = text_ops { Some(text.to_text(asset_server)) } else { None },
+        }
+    }
 }
 
 #[serde_inline_default]
@@ -87,6 +78,18 @@ struct NodeBundleBuilder {
     #[serde(default)]
     border_radius: BorderRadius,
 }
+impl NodeBundleBuilder {
+    fn to_node_bundle(self) -> NodeBundle {
+        let Self { style, background_color, border_color, border_radius } = self;
+        NodeBundle {
+            style,
+            background_color: BackgroundColor(Color::Srgba(str_to_css_color(&background_color))),
+            border_color: BorderColor(Color::Srgba(str_to_css_color(&border_color))),
+            border_radius,
+            ..default()
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(default)]
@@ -95,12 +98,35 @@ struct TextBuilder {
     justify: JustifyText,
     linebreak_behavior: BreakLineOn,
 }
+impl TextBuilder {
+    fn to_text(self, asset_server: Res<AssetServer>) -> Text {
+        let Self { section_builders, justify, linebreak_behavior } = self;
+        let mut sections = Vec::new();
+        for section_builder in section_builders {
+            sections.push(section_builder.to_text_section(asset_server.clone()));
+        }
+        Text {
+            sections,
+            justify,
+            linebreak_behavior,
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 #[serde(default)]
 struct TextSectionBuilder {
     value: String,
     style_builder: TextStyleBuilder,
+}
+impl TextSectionBuilder {
+    fn to_text_section(self, asset_server: AssetServer) -> TextSection {
+        let Self { value, style_builder } = self;
+        TextSection {
+            value,
+            style: style_builder.to_text_style(asset_server),
+        }
+    }
 }
 
 #[serde_inline_default]
@@ -114,12 +140,13 @@ struct TextStyleBuilder {
     color: String,
 }
 impl TextStyleBuilder {
-    fn to_text_style(self, asset_server: Res<AssetServer>) -> TextStyle {
+    fn to_text_style(self, asset_server: AssetServer) -> TextStyle {
+        let Self { font, font_size, color } = self;
         TextStyle {
             font: asset_server.load(font),
             font_size,
             color: Color::Srgba(str_to_css_color(&color)),
-        };
+        }
     }
 }
 
@@ -279,7 +306,7 @@ fn str_to_css_color(color_str: &str) -> Srgba {
 pub fn rr() {
     let r = CellBuilder {
         name: "Tree".to_string(),
-        node_builder: NodeBundleBuilder {
+        node: NodeBundleBuilder {
             style: Style {
                 ..default()
             },
@@ -290,19 +317,27 @@ pub fn rr() {
             },
             ..default()
         },
-        text_builder: None,
+        text: None,
+    };
+    let r3 = GameConfigBuilder {
+        name: "tents and trees".to_string(),
+        nouns: NounBuilder {
+            spatial_elements: SpatialElementBuilder {
+                cells: vec![r],
+            }
+        },
     };
     let options = Options::default()
         .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
         .with_default_extension(Extensions::IMPLICIT_SOME);
 
-    let ss = options.to_string_pretty(&vec![r], PrettyConfig::default()).unwrap();
+    let ss = options.to_string_pretty(&r3, PrettyConfig::default()).unwrap();
     println!("{ss}");
 
     let s = r#"
     [
         {
-            "name: "Empty",
+            "name": "Empty",
             "background_color": "WHITE",
         },
         {
@@ -325,3 +360,20 @@ pub fn rr() {
 }
 
 // https://github.com/ron-rs/ron/issues/115
+
+// r#"
+// (
+//     name: "tents and trees",
+//     nouns: (
+//         spatial_elements: (
+//             cells: [
+//                 {
+//                     "name": "Tree",
+//                     "style": (
+//                     )
+//                 }
+//             ]
+//         )
+//     )
+// )
+// "#;
