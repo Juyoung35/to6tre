@@ -6,6 +6,8 @@ use bevy::text::BreakLineOn;
 use serde_inline_default::serde_inline_default;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use bevy_mod_picking::prelude::*;
+use rand::prelude::*;
 
 #[derive(Component)]
 struct Cell {
@@ -40,6 +42,7 @@ enum SpatialElement {
 //     fn to_noun(self, asset_server: Res<AssetServer>) -> Noun;
 // }
 
+#[derive(Resource)]
 struct GameBoard {
     config: GameConfig,
     grid: Grid,
@@ -48,7 +51,7 @@ struct GameBoard {
 struct Grid {
     height: usize,
     width: usize,
-    cells: Vec<Vec<Entity>>,
+    cells: Vec<Vec<(usize, Entity)>>,
 }
 
 struct GameConfig {
@@ -450,7 +453,7 @@ fn str_to_css_color(color_str: &str) -> Srgba {
     }
 }
 
-fn spawn_header(builder: &mut ChildBuilder, font: &Font, game_title: &str) {
+fn spawn_header(builder: &mut ChildBuilder, font: &Handle<Font>, game_title: &str) {
     // Header
     builder
         .spawn(NodeBundle {
@@ -468,7 +471,7 @@ fn spawn_header(builder: &mut ChildBuilder, font: &Font, game_title: &str) {
         });
 }
 
-fn spawn_right_side_bar(builder: &mut ChildBuilder, font: &Font) {
+fn spawn_right_side_bar(builder: &mut ChildBuilder, font: &Handle<Font>) {
     // Right side bar (auto placed in row 2, column 2)
     builder
         .spawn(NodeBundle {
@@ -487,7 +490,7 @@ fn spawn_right_side_bar(builder: &mut ChildBuilder, font: &Font) {
                 row_gap: Val::Px(10.),
                 ..default()
             },
-            background_color: BackgroundColor(BLACK),
+            background_color: BackgroundColor(Color::Srgba(BLACK)),
             ..default()
         })
         .with_children(|builder| {
@@ -519,9 +522,21 @@ fn spawn_footer(builder: &mut ChildBuilder) {
             grid_column: GridPlacement::span(2),
             ..default()
         },
-        background_color: BackgroundColor(WHITE),
+        background_color: BackgroundColor(Color::Srgba(WHITE)),
         ..default()
     });
+}
+fn spawn_nested_text_bundle(builder: &mut ChildBuilder, font: Handle<Font>, text: &str) {
+    builder.spawn(
+        TextBundle::from_section(
+            text,
+            TextStyle {
+                font,
+                font_size: 24.0,
+                color: Color::BLACK,
+            },
+        ),
+    );
 }
 
 fn spawn_layout(
@@ -529,6 +544,7 @@ fn spawn_layout(
     asset_server: Res<AssetServer>,
     mut game_board: ResMut<GameBoard>,
 ) {
+    // let mut game_board = game_board.into_inner();
     let width = game_board.grid.width;
     let height = game_board.grid.height;
     let font = asset_server.load("fonts/FiraSans-Bold.ttf");
@@ -558,7 +574,7 @@ fn spawn_layout(
                 ],
                 ..default()
             },
-            background_color: BackgroundColor(WHITE),
+            background_color: BackgroundColor(Color::Srgba(WHITE)),
             ..default()
         })
         .with_children(|builder| {
@@ -598,17 +614,17 @@ fn spawn_layout(
                     // style property.
 
                     let mut rng = rand::thread_rng();
-                    let cells = &mut grid.cells;
-                    let probs = &game_board.game_config.nouns.gen_config.probs;
-                    let nouns = &game_board.game_config.nouns.nouns;
-                    for y in 0..grid.height {
-                        let mut rows = Vec::new();
-                        for x in 0..grid.width {
+                    let cells = &mut game_board.grid.cells;
+                    let probs = &game_board.config.nouns.gen_config.probs;
+                    let nouns = &game_board.config.nouns.nouns;
+                    for y in 0..height {
+                        let mut row = Vec::new();
+                        for x in 0..width {
                             let r = rng.gen();
-                            let mut gen_id = game_board.game_config.nouns.gen_config.default;
+                            let mut gen_id = game_board.config.nouns.gen_config.default;
                             for (prob, noun_id) in probs.iter() {
                                 if r > prob { continue }
-                                gen_id = noun_id;
+                                gen_id = *noun_id;
                                 break;
                             }
                             let entity_id = builder
@@ -636,7 +652,7 @@ fn spawn_layout(
                                 //     ));
                                 // })
                                 .id();
-                            rows.push(entity_id);
+                            row.push((noun_id, entity_id));
                         }
                         cells.push(row);
                     }
@@ -644,7 +660,25 @@ fn spawn_layout(
 
             for y in 0..height {
                 for x in 0..width {
+                    let (noun_id, entity) = game_board.grid.cells[y][x];
+                    if let Some(cell) = game_board.config.nouns.nouns.get(noun_id) {
 
+                    }
+                    if let Some(mut entity_commands) = commands.get_entity(entity) {
+                        entity_commands.insert(
+                            On::<Pointer<Click>>::commands_mut(move |click, commands| {
+                                match click.button {
+                                    PointerButton::Primary => {
+                                        commands.trigger_targets(CellClickLeft { x, y }, entity);
+                                    },
+                                    PointerButton::Secondary => {
+                                        commands.trigger_targets(CellClickRight { x, y }, entity);
+                                    },
+                                    _ => (),
+                                }
+                            })
+                        );
+                    }
                 }
             }
 
@@ -653,7 +687,33 @@ fn spawn_layout(
         });
 }
 
-fn detect_change(query: Query<)
+#[derive(Event)]
+struct CellClickLeft {
+    x: usize,
+    y: usize,
+}
+impl CellClickLeft {
+    fn reveal_cell(
+        trigger: Trigger<Self>,
+        game_board: ResMut<GameBoard>,
+    ) {
+        let Self { x, y } = trigger.event();
+    }
+}
+
+#[derive(Event)]
+struct CellClickRight {
+    x: usize,
+    y: usize,
+}
+
+fn detect_change(query: Query<(Entity, &mut NodeBundle, Cell), Changed<Cell>>) {
+
+}
+
+fn merge_node_bundle() {
+
+}
 
 pub fn rr(asset_server: Res<AssetServer>) {
     let r = CellBuilder {
@@ -741,7 +801,7 @@ enum GameState {
 }
 
 pub fn parse_games(asset_server: Res<AssetServer>) {
-    if Ok(game_config_builders) = read_games("src/games.ron") {
+    if let Ok(game_config_builders) = read_games("src/games.ron") {
         let mut game_configs = Vec::new();
         for game_config_builder in game_config_builders {
             let game_config = game_config_builder.to_game_config(asset_server.clone());
