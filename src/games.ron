@@ -1,0 +1,29 @@
+[
+    (
+        name: "tents and trees",
+        nouns: (
+            spatial_elements: (
+                cells: [
+                    {
+                        "name": "Empty",
+                        "gen_method": "default",
+                        "background_color": "WHITE",
+                    },
+                    {
+                        "name": "Flagged",
+                        "background_color": "GREEN",
+                    },
+                    {
+                        "name": "Tree",
+                        "gen_method": Random(0.3),
+                        "background_color": "GREEN",
+                    },
+                    {
+                        "name": "Tent",
+                        "background_color": "GREEN",
+                    },
+                ]
+            )
+        )
+    )
+]

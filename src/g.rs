@@ -40,6 +40,17 @@ enum SpatialElement {
 //     fn to_noun(self, asset_server: Res<AssetServer>) -> Noun;
 // }
 
+struct GameBoard {
+    config: GameConfig,
+    grid: Grid,
+}
+
+struct Grid {
+    height: usize,
+    width: usize,
+    cells: Vec<Vec<Entity>>,
+}
+
 struct GameConfig {
     name: String,
     nouns: Nouns,
@@ -49,6 +60,11 @@ struct Nouns {
     nouns: Vec<Noun>,
     noun_map: HashMap<String, usize>,
     gen_config: GenConfig,
+}
+impl Nouns {
+    fn setup(&self, ) {
+
+    }
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -434,6 +450,160 @@ fn str_to_css_color(color_str: &str) -> Srgba {
     }
 }
 
+fn spawn_header(builder: &mut ChildBuilder, font: &Font, game_title: &str) {
+    // Header
+    builder
+        .spawn(NodeBundle {
+            style: Style {
+                display: Display::Grid,
+                // Make this node span two grid columns so that it takes up the entire top tow
+                grid_column: GridPlacement::span(2),
+                padding: UiRect::all(Val::Px(6.0)),
+                ..default()
+            },
+            ..default()
+        })
+        .with_children(|builder| {
+            spawn_nested_text_bundle(builder, font.clone(), game_title);
+        });
+}
+
+fn spawn_right_side_bar(builder: &mut ChildBuilder, font: &Font) {
+    // Right side bar (auto placed in row 2, column 2)
+    builder
+        .spawn(NodeBundle {
+            style: Style {
+                display: Display::Grid,
+                // Align content towards the start (top) in the vertical axis
+                align_items: AlignItems::Start,
+                // Align content towards the center in the horizontal axis
+                justify_items: JustifyItems::Center,
+                // Add 10px padding
+                padding: UiRect::all(Val::Px(10.)),
+                // Add an fr track to take up all the available space at the bottom of the column so that the text nodes
+                // can be top-aligned. Normally you'd use flexbox for this, but this is the CSS Grid example so we're using grid.
+                grid_template_rows: vec![GridTrack::auto(), GridTrack::auto(), GridTrack::fr(1.0)],
+                // Add a 10px gap between rows
+                row_gap: Val::Px(10.),
+                ..default()
+            },
+            background_color: BackgroundColor(BLACK),
+            ..default()
+        })
+        .with_children(|builder| {
+            builder.spawn(TextBundle::from_section(
+                "Game State",
+                TextStyle {
+                    font: font.clone(),
+                    font_size: 24.0,
+                    ..default()
+                },
+            ));
+            builder.spawn(TextBundle::from_section(
+                "Revealed : 0 / 0",
+                TextStyle {
+                    font: font.clone(),
+                    font_size: 16.0,
+                    ..default()
+                },
+            ));
+            builder.spawn(NodeBundle::default());
+        });
+}
+
+fn spawn_footer(builder: &mut ChildBuilder) {
+    // Footer / status bar
+    builder.spawn(NodeBundle {
+        style: Style {
+            // Make this node span two grid column so that it takes up the entire bottom row
+            grid_column: GridPlacement::span(2),
+            ..default()
+        },
+        background_color: BackgroundColor(WHITE),
+        ..default()
+    });
+}
+
+fn spawn_layout(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut game_board: ResMut<GameBoard>,
+) {
+    let mut grid = &mut game_board.grid;
+    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
+    commands.spawn(Camera2dBundle::default());
+    
+    // Top-level grid (app frame)
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                // Use the CSS Grid algorithm for laying out this node
+                display: Display::Grid,
+                // Make node fill the entirety of its parent (in this case the window)
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                // Set the grid to have 2 columns with sizes [min-content, minmax(0, 1fr)]
+                //   - The first column will size to the size of its contents
+                //   - The second column will take up the remaining available space
+                grid_template_columns: vec![GridTrack::min_content(), GridTrack::flex(1.0)],
+                // Set the grid to have 3 rows with sizes [auto, minmax(0, 1fr), 20px]
+                //  - The first row will size to the size of its contents
+                //  - The second row take up remaining available space (after rows 1 and 3 have both been sized)
+                //  - The third row will be exactly 20px high
+                grid_template_rows: vec![
+                    GridTrack::auto(),
+                    GridTrack::flex(1.0),
+                    GridTrack::px(20.),
+                ],
+                ..default()
+            },
+            background_color: BackgroundColor(WHITE),
+            ..default()
+        })
+        .with_children(|builder| {
+            spawn_header(&mut builder, &font, &game_board.config.name);
+            
+            // Main content grid (auto placed in row 2, column 1)
+            builder
+                .spawn(NodeBundle {
+                    style: Style {
+                        // Make the height of the node fill its parent
+                        height: Val::Percent(100.0),
+                        // Make the grid have a 1:1 aspect ratio meaning it will scale as an exact square
+                        // As the height is set explicitly, this means the width will adjust to match the height
+                        aspect_ratio: Some(1.0),
+                        // Use grid layout for this node
+                        display: Display::Grid,
+                        // Add 24px of padding around the grid
+                        padding: UiRect::all(Val::Px(24.0)),
+                        // Set the grid to have 4 columns all with sizes minmax(0, 1fr)
+                        // This creates 4 exactly evenly sized columns
+                        grid_template_columns: RepeatedGridTrack::flex(grid.width as u16, 1.0),
+                        // Set the grid to have 4 rows all with sizes minmax(0, 1fr)
+                        // This creates 4 exactly evenly sized rows
+                        grid_template_rows: RepeatedGridTrack::flex(grid.height as u16, 1.0),
+                        // Set a 12px gap/gutter between rows and columns
+                        row_gap: Val::Px(1.0),
+                        column_gap: Val::Px(1.0),
+                        ..default()
+                    },
+                    background_color: BackgroundColor(Color::srgb(0.25, 0.25, 0.25)),
+                    ..default()
+                })
+                .with_children(|builder| {
+                    // Note there is no need to specify the position for each grid item. Grid items that are
+                    // not given an explicit position will be automatically positioned into the next available
+                    // grid cell. The order in which this is performed can be controlled using the grid_auto_flow
+                    // style property.
+
+                    let cells = &mut grid.cells;
+                });
+
+            spawn_right_side_bar(&mut builder, &font);
+            spawn_footer(&mut builder);
+        });
+}
+
 pub fn rr(asset_server: Res<AssetServer>) {
     let r = CellBuilder {
         name: "Tree".to_string(),
@@ -509,4 +679,44 @@ pub fn rr(asset_server: Res<AssetServer>) {
     println!("{out:?}");
 }
 
+
 // https://github.com/ron-rs/ron/issues/115
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
+enum GameState {
+    #[default]
+    MainMenu,
+    // InGame(String),
+}
+
+pub fn parse_games(asset_server: Res<AssetServer>) {
+    if Ok(game_config_builders) = read_games("src/games.ron") {
+        let mut game_configs = Vec::new();
+        for game_config_builder in game_config_builders {
+            let game_config = game_config_builder.to_game_config(asset_server.clone());
+            game_configs.push(game_config);
+        }
+    } else {
+        panic!("Failed to Parse Game!");
+    }
+}
+
+fn read_games(file_path: &str) -> std::io::Result<Vec<GameConfigBuilder>> {
+    // Setup the options
+    let options = Options::default()
+        .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
+        .with_default_extension(Extensions::IMPLICIT_SOME);
+
+    let mut contents = String::new();
+    read_ron(&mut contents, file_path);
+    let game_config_builders: Vec<GameConfigBuilder> = options.from_str(&mut contents).unwrap();
+
+    Ok(game_config_builders)
+}
+
+fn read_ron(contents: &mut String, file_path: &str) -> std::io::Result<()> {
+    let file = File::open(file_path)?;
+    let mut buf_reader = BufReader::new(file);
+    buf_reader.read_to_string(contents)?;
+    Ok(())
+}
