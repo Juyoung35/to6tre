@@ -4,12 +4,14 @@ use ron::{self, extensions::Extensions, options::Options};
 use std::io::{BufReader, Read};
 use gblp::builders::GameConfigBuilder;
 
-pub(super) fn parse_games(asset_server: Res<AssetServer>) {
+pub(super) fn parse_games(
+    asset_server: Res<AssetServer>,
+    game_configs: ResMut<GameConfigs>,
+) {
     if let Ok(game_config_builders) = read_games("src/games.ron") {
-        let mut game_configs = Vec::new();
         for game_config_builder in game_config_builders {
             let game_config = game_config_builder.to_game_config(asset_server.clone());
-            game_configs.push(game_config);
+            game_configs.0.push(game_config);
         }
     } else {
         panic!("Failed to Parse Game!");

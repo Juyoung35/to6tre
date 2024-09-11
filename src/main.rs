@@ -13,7 +13,7 @@ use winit::window::Icon;
 // use web_sys::console;
 // use bevy_game::games::MineSweeperPlugin;
 // use bevy_game::games::MSPlugin;
-use gblp::g::*;
+use gblp::g::GBLPPlugin;
 
 fn main() {
     // unsafe { console::log_1(&"Hello, world!".into()); }
@@ -39,12 +39,13 @@ fn main() {
                     ..default()
                 }),
         )
-        // .add_plugins(GamePlugin)
+        .add_plugins(GamePlugin)
         // .add_plugins(MineSweeperPlugin)
         // .add_plugins(MSPlugin)
         // .add_plugins(MineSweeperPlugin)
         .add_systems(Startup, set_window_icon)
-        .add_systems(Startup, rr)
+        // .add_systems(Startup, rr)
+        .add_plugins(GBLPPlugin)
         .run();
 }
 

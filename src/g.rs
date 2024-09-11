@@ -9,6 +9,15 @@ use bevy_mod_picking::prelude::*;
 use rand::prelude::*;
 use bevy_game::utils::*;
 
+struct GBLPPlugin;
+impl Plugin for GBLPPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .init_resource::<GameConfigs>()
+            .add_systems(Startup, parse_games);
+    }
+}
+
 type NounID = usize;
 
 #[derive(Component)]
@@ -37,6 +46,9 @@ enum SpatialElement {
         text: Option<Text>,
     },
 }
+
+#[derive(Resource, Debug)]
+struct GameConfigs(HashMap<String, GameConfig>);
 
 #[derive(Resource, Debug)]
 struct GameBoard {
