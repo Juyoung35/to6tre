@@ -9,7 +9,7 @@ struct CellBuilder {
     sprite: Option<String>,
     is_valid: Option<String>,
 }
-// todo expand click to handle action
+// expand click to handle action
 struct Cell {
     name: String,
     is_default: bool,

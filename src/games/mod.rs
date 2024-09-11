@@ -332,7 +332,6 @@ fn spawn_layout(
                                 commands.trigger_targets(RevealCell { pos: UVec2::new(x, y) }, entity);
                             },
                             PointerButton::Secondary => {
-                                // TODO: flagging
                             },
                             _ => (),
                         }

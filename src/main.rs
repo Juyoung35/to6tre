@@ -6,14 +6,14 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
-// use bevy_game::GamePlugin; // ToDo: Replace bevy_game with your new crate name.
+use gblp::GamePlugin;
 use std::io::Cursor;
 use winit::window::Icon;
 
 // use web_sys::console;
 // use bevy_game::games::MineSweeperPlugin;
 // use bevy_game::games::MSPlugin;
-use gblp::g::GBLPPlugin;
+// use gblp::g::GBLPPlugin;
 
 fn main() {
     // unsafe { console::log_1(&"Hello, world!".into()); }
@@ -24,7 +24,7 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "Bevy game".to_string(), // ToDo
+                        title: "evy game".to_string(), // ToDo
                         // Bind to canvas included in `index.html`
                         canvas: Some("#bevy".to_owned()),
                         fit_canvas_to_parent: true,
@@ -45,7 +45,7 @@ fn main() {
         // .add_plugins(MineSweeperPlugin)
         .add_systems(Startup, set_window_icon)
         // .add_systems(Startup, rr)
-        .add_plugins(GBLPPlugin)
+        // .add_plugins(GBLPPlugin)
         .run();
 }
 

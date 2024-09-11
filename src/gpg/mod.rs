@@ -147,7 +147,6 @@ macro_rules! build_cell_state {
     });
 }
 
-// todo
 // variant -> {left_next, right_next} => {render}
 
 
