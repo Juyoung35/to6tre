@@ -529,7 +529,8 @@ fn spawn_layout(
     asset_server: Res<AssetServer>,
     mut game_board: ResMut<GameBoard>,
 ) {
-    let mut grid = &mut game_board.grid;
+    let width = game_board.grid.width;
+    let height = game_board.grid.height;
     let font = asset_server.load("fonts/FiraSans-Bold.ttf");
     commands.spawn(Camera2dBundle::default());
     
@@ -578,10 +579,10 @@ fn spawn_layout(
                         padding: UiRect::all(Val::Px(24.0)),
                         // Set the grid to have 4 columns all with sizes minmax(0, 1fr)
                         // This creates 4 exactly evenly sized columns
-                        grid_template_columns: RepeatedGridTrack::flex(grid.width as u16, 1.0),
+                        grid_template_columns: RepeatedGridTrack::flex(width as u16, 1.0),
                         // Set the grid to have 4 rows all with sizes minmax(0, 1fr)
                         // This creates 4 exactly evenly sized rows
-                        grid_template_rows: RepeatedGridTrack::flex(grid.height as u16, 1.0),
+                        grid_template_rows: RepeatedGridTrack::flex(height as u16, 1.0),
                         // Set a 12px gap/gutter between rows and columns
                         row_gap: Val::Px(1.0),
                         column_gap: Val::Px(1.0),
@@ -596,13 +597,63 @@ fn spawn_layout(
                     // grid cell. The order in which this is performed can be controlled using the grid_auto_flow
                     // style property.
 
+                    let mut rng = rand::thread_rng();
                     let cells = &mut grid.cells;
+                    let probs = &game_board.game_config.nouns.gen_config.probs;
+                    let nouns = &game_board.game_config.nouns.nouns;
+                    for y in 0..grid.height {
+                        let mut rows = Vec::new();
+                        for x in 0..grid.width {
+                            let r = rng.gen();
+                            let mut gen_id = game_board.game_config.nouns.gen_config.default;
+                            for (prob, noun_id) in probs.iter() {
+                                if r > prob { continue }
+                                gen_id = noun_id;
+                                break;
+                            }
+                            let entity_id = builder
+                                .spawn((
+                                    PickableBundle::default(),
+                                    NodeBundle {
+                                        style: Style {
+                                            display: Display::Grid,
+                                            padding: UiRect::all(Val::Px(3.0)),
+                                            ..default()
+                                        },
+                                        background_color: BackgroundColor(Color::srgb(0.75, 0.75, 0.75)),
+                                        ..default()
+                                    },
+                                    Cell { x, y, model: gen_id },
+                                ))
+                                // .with_children(|builder| {
+                                //     builder.spawn(TextBundle::from_section(
+                                //         " ",
+                                //         TextStyle {
+                                //             font: font.clone(),
+                                //             font_size: 48.0,
+                                //             color: BLACK,
+                                //         },
+                                //     ));
+                                // })
+                                .id();
+                            rows.push(entity_id);
+                        }
+                        cells.push(row);
+                    }
                 });
+
+            for y in 0..height {
+                for x in 0..width {
+
+                }
+            }
 
             spawn_right_side_bar(&mut builder, &font);
             spawn_footer(&mut builder);
         });
 }
+
+fn detect_change(query: Query<)
 
 pub fn rr(asset_server: Res<AssetServer>) {
     let r = CellBuilder {
