@@ -6,14 +6,14 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
-use bevy_game::GamePlugin; // ToDo: Replace bevy_game with your new crate name.
+// use bevy_game::GamePlugin; // ToDo: Replace bevy_game with your new crate name.
 use std::io::Cursor;
 use winit::window::Icon;
 
 // use web_sys::console;
 // use bevy_game::games::MineSweeperPlugin;
 // use bevy_game::games::MSPlugin;
-use bevy_game::g::*;
+use gblp::g::*;
 
 fn main() {
     // unsafe { console::log_1(&"Hello, world!".into()); }

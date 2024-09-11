@@ -4,30 +4,30 @@
         nouns: (
             spatial_elements: (
                 cells: [
-                    {
-                        "name": "Empty",
-                        "gen_method": "default",
-                        "background_color": "WHITE",
-                        "l_click": TransformTo("Tent"),
-                        "r_click": TransformTo("Flagged"),
-                    },
-                    {
-                        "name": "Flagged",
-                        "background_color": "GREEN",
-                        "l_click": TransformTo("Tent"),
-                        "r_click": TransformTo("Empty"),
-                    },
-                    {
-                        "name": "Tree",
-                        "gen_method": Random(0.3),
-                        "background_color": "GREEN",
-                    },
-                    {
-                        "name": "Tent",
-                        "background_color": "GREEN",
-                        "l_click": TransformTo("Empty"),
-                        "r_click": TransformTo("Flagged"),
-                    },
+                    (
+                        name: "Empty",
+                        gen_method: "default",
+                        background_color: "WHITE",
+                        l_click: TransformTo("Tent"),
+                        r_click: TransformTo("Flagged"),
+                    ),
+                    (
+                        name: "Flagged",
+                        background_color: "GREEN",
+                        l_click: TransformTo("Tent"),
+                        r_click: TransformTo("Empty"),
+                    ),
+                    (
+                        name: "Tree",
+                        gen_method: Random(0.3),
+                        background_color: "GREEN",
+                    ),
+                    (
+                        name: "Tent",
+                        background_color: "GREEN",
+                        l_click: TransformTo("Empty"),
+                        r_click: TransformTo("Flagged"),
+                    ),
                 ]
             )
         )
