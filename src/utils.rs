@@ -2,16 +2,18 @@ use bevy::prelude::*;
 use bevy::color::palettes::css::*;
 use ron::{self, extensions::Extensions, options::Options};
 use std::io::{BufReader, Read};
-use gblpc::builders::GameConfigBuilder;
+use std::fs::File;
+use crate::g::GameConfigs;
+use crate::builders::GameConfigBuilder;
 
 pub(super) fn parse_games(
     asset_server: Res<AssetServer>,
-    game_configs: ResMut<GameConfigs>,
+    mut game_configs: ResMut<GameConfigs>,
 ) {
     if let Ok(game_config_builders) = read_games("src/games.ron") {
         for game_config_builder in game_config_builders {
             let game_config = game_config_builder.to_game_config(asset_server.clone());
-            game_configs.0.push(game_config);
+            game_configs.0.insert(game_config.name.clone(), game_config);
         }
     } else {
         panic!("Failed to Parse Game!");
@@ -40,7 +42,7 @@ fn read_ron(contents: &mut String, file_path: &str) -> std::io::Result<()> {
 
 
 
-fn spawn_header(builder: &mut ChildBuilder, font: &Handle<Font>, game_title: &str) {
+pub(super) fn spawn_header(builder: &mut ChildBuilder, font: &Handle<Font>, game_title: &str) {
     // Header
     builder
         .spawn(NodeBundle {

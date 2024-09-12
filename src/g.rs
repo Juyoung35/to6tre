@@ -7,7 +7,8 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use bevy_mod_picking::prelude::*;
 use rand::prelude::*;
-use bevy_game::utils::*;
+use crate::utils::*;
+use crate::builders::*;
 
 pub struct GBLPPlugin;
 impl Plugin for GBLPPlugin {
@@ -28,12 +29,12 @@ struct Cell {
 }
 
 #[derive(Debug)]
-enum Noun {
+pub(super) enum Noun {
     SpatialElement(SpatialElement),
 }
 
 #[derive(Debug)]
-enum SpatialElement {
+pub(super) enum SpatialElement {
     Cell {
         id: NounID,
         name: String,
@@ -48,7 +49,7 @@ enum SpatialElement {
 }
 
 #[derive(Resource, Debug, Default)]
-struct GameConfigs(HashMap<String, GameConfig>);
+pub(super) struct GameConfigs(pub(super) HashMap<String, GameConfig>);
 
 #[derive(Resource, Debug)]
 struct GameBoard {
@@ -64,22 +65,22 @@ struct Grid {
 }
 
 #[derive(Debug, Default)]
-struct GameConfig {
-    name: String,
-    nouns: Nouns,
+pub(super) struct GameConfig {
+    pub(super) name: String,
+    pub(super) nouns: Nouns,
 }
 
 #[derive(Debug, Default)]
-struct Nouns {
-    nouns: Vec<Noun>,
-    noun_map: HashMap<String, NounID>,
-    gen_config: GenConfig,
+pub(super) struct Nouns {
+    pub(super) nouns: Vec<Noun>,
+    pub(super) noun_map: HashMap<String, NounID>,
+    pub(super) gen_config: GenConfig,
 }
-impl Nouns {
-    fn setup(&self, ) {
+// impl Nouns {
+//     fn setup(&self, ) {
 
-    }
-}
+//     }
+// }
 
 
 
@@ -92,13 +93,13 @@ enum GenMethod {
 }
 
 #[derive(Default, Debug)]
-struct GenConfig {
-    default: NounID,
-    probs: Vec<(f64, NounID)>,
+pub(super) struct GenConfig {
+    pub(super) default: NounID,
+    pub(super) probs: Vec<(f64, NounID)>,
 }
 
 #[derive(Clone, Copy, Debug)]
-enum Action {
+pub(super) enum Action {
     TransformTo(NounID),
 }
 
@@ -137,11 +138,11 @@ fn spawn_layout(
                 ],
                 ..default()
             },
-            background_color: BackgroundColor(Color::Srgba(WHITE)),
+            background_color: BackgroundColor(Color::WHITE),
             ..default()
         })
         .with_children(|builder| {
-            spawn_header(&mut builder, &font, &game_board.config.name);
+            spawn_header(builder, &font, &game_board.config.name);
             
             // Main content grid (auto placed in row 2, column 1)
             builder
@@ -177,16 +178,16 @@ fn spawn_layout(
                     // style property.
 
                     let mut rng = rand::thread_rng();
-                    let cells = &mut game_board.grid.cells;
                     let probs = &game_board.config.nouns.gen_config.probs;
                     let nouns = &game_board.config.nouns.nouns;
+                    let mut cells = Vec::new();
                     for y in 0..height {
                         let mut row = Vec::new();
                         for x in 0..width {
-                            let r = rng.gen();
+                            let r: f64 = rng.gen();
                             let mut gen_id = game_board.config.nouns.gen_config.default;
                             for (prob, noun_id) in probs.iter() {
-                                if r > prob { continue }
+                                if r > *prob { continue }
                                 gen_id = *noun_id;
                                 break;
                             }
@@ -215,39 +216,42 @@ fn spawn_layout(
                                 //     ));
                                 // })
                                 .id();
-                            row.push((noun_id, entity_id));
+                            row.push((gen_id, entity_id));
                         }
                         cells.push(row);
                     }
+                    for row in cells {
+                        game_board.grid.cells.push(row);
+                    }
                 });
 
-            for y in 0..height {
-                for x in 0..width {
-                    let (noun_id, entity) = game_board.grid.cells[y][x];
-                    if let Some(cell) = game_board.config.nouns.nouns.get(noun_id) {
-
-                    }
-                    if let Some(mut entity_commands) = commands.get_entity(entity) {
-                        entity_commands.insert(
-                            On::<Pointer<Click>>::commands_mut(move |click, commands| {
-                                match click.button {
-                                    PointerButton::Primary => {
-                                        commands.trigger_targets(CellClickLeft { x, y }, entity);
-                                    },
-                                    PointerButton::Secondary => {
-                                        commands.trigger_targets(CellClickRight { x, y }, entity);
-                                    },
-                                    _ => (),
-                                }
-                            })
-                        );
-                    }
-                }
-            }
-
-            spawn_right_side_bar(&mut builder, &font);
-            spawn_footer(&mut builder);
+            spawn_right_side_bar(builder, &font);
+            spawn_footer(builder);
         });
+
+    for y in 0..height {
+        for x in 0..width {
+            let (noun_id, entity) = game_board.grid.cells[y][x];
+            if let Some(cell) = game_board.config.nouns.nouns.get(noun_id) {
+
+            }
+            if let Some(mut entity_commands) = commands.get_entity(entity) {
+                entity_commands.insert(
+                    On::<Pointer<Click>>::commands_mut(move |click, commands| {
+                        match click.button {
+                            PointerButton::Primary => {
+                                commands.trigger_targets(CellClickLeft { x, y }, entity);
+                            },
+                            PointerButton::Secondary => {
+                                commands.trigger_targets(CellClickRight { x, y }, entity);
+                            },
+                            _ => (),
+                        }
+                    })
+                );
+            }
+        }
+    }
 }
 
 #[derive(Event)]
@@ -270,88 +274,88 @@ struct CellClickRight {
     y: usize,
 }
 
-fn detect_change(query: Query<(Entity, &mut NodeBundle, Cell), Changed<Cell>>) {
+// fn detect_change(query: Query<(Entity, &mut NodeBundle, Cell), Changed<Cell>>) {
 
-}
+// }
 
 fn merge_node_bundle() {
 
 }
 
-pub fn rr(asset_server: Res<AssetServer>) {
-    let r = CellBuilder {
-        name: "Tree".to_string(),
-        node: NodeBundleBuilder {
-            style: Style {
-                ..default()
-            },
-            background_color: "ORANGE".to_string(),
-            border_radius: BorderRadius {
-                top_left: Val::Px(3.0),
-                ..default()
-            },
-            ..default()
-        },
-        gen_method: GenMethodBuilder::Random(0.3),
-        text: None,
-        ..default()
-    };
-    // let r3 = GameConfigBuilder {
-    //     name: "tents and trees".to_string(),
-    //     nouns: NounBuilder {
-    //         spatial_elements: SpatialElementBuilder {
-    //             cells: vec![r],
-    //         }
-    //     },
-    // };
-    let options = Options::default()
-        .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
-        .with_default_extension(Extensions::IMPLICIT_SOME);
+// pub fn rr(asset_server: Res<AssetServer>) {
+//     let r = CellBuilder {
+//         name: "Tree".to_string(),
+//         node: NodeBundleBuilder {
+//             style: Style {
+//                 ..default()
+//             },
+//             background_color: "ORANGE".to_string(),
+//             border_radius: BorderRadius {
+//                 top_left: Val::Px(3.0),
+//                 ..default()
+//             },
+//             ..default()
+//         },
+//         gen_method: GenMethodBuilder::Random(0.3),
+//         text: None,
+//         ..default()
+//     };
+//     // let r3 = GameConfigBuilder {
+//     //     name: "tents and trees".to_string(),
+//     //     nouns: NounBuilder {
+//     //         spatial_elements: SpatialElementBuilder {
+//     //             cells: vec![r],
+//     //         }
+//     //     },
+//     // };
+//     let options = Options::default()
+//         .without_default_extension(Extensions::EXPLICIT_STRUCT_NAMES)
+//         .with_default_extension(Extensions::IMPLICIT_SOME);
 
-    // let ss = options.to_string_pretty(&r3, PrettyConfig::default()).unwrap();
-    // println!("{ss}");
+//     // let ss = options.to_string_pretty(&r3, PrettyConfig::default()).unwrap();
+//     // println!("{ss}");
 
-    let ronfig = r#"
-[
-    (
-        name: "tents and trees",
-        nouns: (
-            spatial_elements: (
-                cells: [
-                    {
-                        "name": "Empty",
-                        "gen_method": "default",
-                        "background_color": "WHITE",
-                    },
-                    {
-                        "name": "Flagged",
-                        "background_color": "GREEN",
-                    },
-                    {
-                        "name": "Tree",
-                        "gen_method": Random(0.3),
-                        "background_color": "GREEN",
-                    },
-                    {
-                        "name": "Tent",
-                        "background_color": "GREEN",
-                    },
-                ]
-            )
-        )
-    )
-]
-"#;
+//     let ronfig = r#"
+// [
+//     (
+//         name: "tents and trees",
+//         nouns: (
+//             spatial_elements: (
+//                 cells: [
+//                     {
+//                         "name": "Empty",
+//                         "gen_method": "default",
+//                         "background_color": "WHITE",
+//                     },
+//                     {
+//                         "name": "Flagged",
+//                         "background_color": "GREEN",
+//                     },
+//                     {
+//                         "name": "Tree",
+//                         "gen_method": Random(0.3),
+//                         "background_color": "GREEN",
+//                     },
+//                     {
+//                         "name": "Tent",
+//                         "background_color": "GREEN",
+//                     },
+//                 ]
+//             )
+//         )
+//     )
+// ]
+// "#;
 
-    let mut game_configs = Vec::new();
-    let game_config_builders: Vec<GameConfigBuilder> = options.from_str(ronfig).unwrap();
-    for game_config_builder in game_config_builders {
-        let game_config = game_config_builder.to_game_config(asset_server.clone());
-        game_configs.push(game_config);
-    }
-    let out: Vec<GameConfigBuilder> = options.from_str(ronfig).unwrap();
-    println!("{out:?}");
-}
+//     let mut game_configs = Vec::new();
+//     let game_config_builders: Vec<GameConfigBuilder> = options.from_str(ronfig).unwrap();
+//     for game_config_builder in game_config_builders {
+//         let game_config = game_config_builder.to_game_config(asset_server.clone());
+//         game_configs.push(game_config);
+//     }
+//     let out: Vec<GameConfigBuilder> = options.from_str(ronfig).unwrap();
+//     println!("{out:?}");
+// }
 
 
 // https://github.com/ron-rs/ron/issues/115

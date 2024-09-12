@@ -1,15 +1,19 @@
 use bevy::prelude::*;
-use gblpc::g::*;
-use gblpc::utils::*;
 use bevy::text::BreakLineOn;
+use serde::{Serialize, Deserialize};
+use serde_inline_default::serde_inline_default;
+use std::collections::HashMap;
+use std::cmp::Ordering;
+use crate::g::*;
+use crate::utils::*;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
-struct GameConfigBuilder {
+pub(super) struct GameConfigBuilder {
     name: String,
     noun_builder: NounBuilder,
 }
 impl GameConfigBuilder {
-    fn to_game_config(self, asset_server: AssetServer) -> GameConfig {
+    pub(super) fn to_game_config(self, asset_server: AssetServer) -> GameConfig {
         let Self { name, noun_builder } = self;
         GameConfig {
             name,
@@ -73,7 +77,7 @@ struct SpatialElementBuilder {
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
-enum GenMethodBuilder {
+pub(super) enum GenMethodBuilder {
     #[default]
     None,
     Default,
