@@ -1,8 +1,8 @@
 [package]
-name = "gblp"
+name = "gblpc"
 version = "0.1.0"
 publish = false
-authors = ["Niklas Eicker <git@nikl.me>"] # ToDo: you are the author ;)
+authors = ["Juyoung35 & Niklas Eicker <git@nikl.me>"]
 edition = "2021"
 exclude = ["dist", "build", "assets", "credits"]
 

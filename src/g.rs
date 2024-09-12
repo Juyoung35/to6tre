@@ -47,7 +47,7 @@ enum SpatialElement {
     },
 }
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Default)]
 struct GameConfigs(HashMap<String, GameConfig>);
 
 #[derive(Resource, Debug)]
@@ -63,13 +63,13 @@ struct Grid {
     cells: Vec<Vec<(usize, Entity)>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct GameConfig {
     name: String,
     nouns: Nouns,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Nouns {
     nouns: Vec<Noun>,
     noun_map: HashMap<String, NounID>,

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
-use gblp::GamePlugin;
+use gblpc::GamePlugin;
 use std::io::Cursor;
 use winit::window::Icon;
 
@@ -24,7 +24,7 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "evy game".to_string(), // ToDo
+                        title: "Grid Based Logic Puzzler Collection".to_string(),
                         // Bind to canvas included in `index.html`
                         canvas: Some("#bevy".to_owned()),
                         fit_canvas_to_parent: true,

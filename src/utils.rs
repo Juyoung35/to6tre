@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::color::palettes::css::*;
 use ron::{self, extensions::Extensions, options::Options};
 use std::io::{BufReader, Read};
-use gblp::builders::GameConfigBuilder;
+use gblpc::builders::GameConfigBuilder;
 
 pub(super) fn parse_games(
     asset_server: Res<AssetServer>,

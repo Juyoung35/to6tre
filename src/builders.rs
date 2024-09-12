@@ -1,5 +1,7 @@
 use bevy::prelude::*;
-use gblp::g::*;
+use gblpc::g::*;
+use gblpc::utils::*;
+use bevy::text::BreakLineOn;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct GameConfigBuilder {
@@ -122,8 +124,8 @@ impl CellBuilder {
                     _ => None,
                 },
                 style,
-                background_color: BackgroundColor(Color::Srgba(str_to_css_color(&background_color))),
-                border_color: BorderColor(Color::Srgba(str_to_css_color(&border_color))),
+                background_color: BackgroundColor(Color::Srgba(str_to_css_srgba(&background_color))),
+                border_color: BorderColor(Color::Srgba(str_to_css_srgba(&border_color))),
                 border_radius,
                 text: if let Some(text) = text_ops { Some(text.to_text(asset_server)) } else { None },
             }
@@ -185,7 +187,7 @@ impl TextStyleBuilder {
         TextStyle {
             font: asset_server.load(font),
             font_size,
-            color: Color::Srgba(str_to_css_color(&color)),
+            color: Color::Srgba(str_to_css_srgba(&color)),
         }
     }
 }
